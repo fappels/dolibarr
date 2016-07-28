@@ -746,7 +746,7 @@ td.showDragHandle {
 	margin-left: 0;
 }
 div.login_block {
-	border-right: none ! important; 
+	/* border-right: none ! important; */
 	top: inherit !important;
 }
 .side-nav {
@@ -771,6 +771,7 @@ div.login_block {
 #id-left {
 	z-index: 201;
 	background: #FFF;
+	border-right: 1px solid rgba(0,0,0,0.3);
 <?php if ((GETPOST('testmenuhider') || ! empty($conf->global->MAIN_TESTMENUHIDER)) && empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER)) { ?>
 	top: 50px ! important;
 <?php } else { ?>
@@ -1911,6 +1912,12 @@ a.tab:link, a.tab:visited, a.tab:hover, a.tab#active {
 	background-image: none !important;
 }
 
+
+.tabunactive {	/* We add some border on tabunactive to avoid change of position of title when switching tabs (border of tabunactive = border of tabactive) */
+    border-right: 1px solid rgb(<?php echo $colorbackbody; ?>);
+    border-left: 1px solid rgb(<?php echo $colorbackbody; ?>);
+}
+
 .tabactive, a.tab#active {
 	color: #<?php echo $colortextbacktab; ?> !important;
 	background: rgb(<?php echo $colorbacktabcard1; ?>) !important;
@@ -2152,7 +2159,7 @@ div.tabBar table.border tr {
 
 table.border td, div.border div div.tagtd {
 	padding: 2px 2px 2px 2px;
-	border: 1px solid #f4f4f4;
+	border: 1px solid #f0f0f0;
 	border-collapse: collapse;
 }
 
@@ -2664,7 +2671,7 @@ div.tabBar .noborder {
 <?php } ?>
 }
 span.boxstatstext {
-	opacity: 0.9;
+	/* opacity: 0.9;  Disabled. This make text on top of left menu in smartphone size */
     line-height: 18px;
 }
 span.boxstatsindicator {

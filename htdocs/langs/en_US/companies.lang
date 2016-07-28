@@ -74,6 +74,7 @@ DefaultLang=Language by default
 VATIsUsed=VAT is used
 VATIsNotUsed=VAT is not used
 CopyAddressFromSoc=Fill address with thirdparty address
+ThirdpartyNotCustomerNotSupplierSoNoRef=Thirdparty neither customer nor supplier, no available refering objects  
 ##### Local Taxes #####
 LocalTax1IsUsed=Use second tax
 LocalTax1IsUsedES= RE is used
@@ -391,3 +392,5 @@ ThirdpartiesMergeSuccess=Thirdparties have been merged
 SaleRepresentativeLogin=Login of sales representative
 SaleRepresentativeFirstname=Firstname of sales representative
 SaleRepresentativeLastname=Lastname of sales representative
+ErrorThirdpartiesMerge=There was an error when deleting the thirdparties. Please check the log. Changes have been reverted.
+NewCustomerSupplierCodeProposed=New customer or supplier proposed on duplicate code
