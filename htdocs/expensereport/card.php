@@ -2,7 +2,7 @@
 /* Copyright (C) 2003      Rodolphe Quiedeville <rodolphe@quiedeville.org>
  * Copyright (C) 2004-2015 Laurent Destailleur  <eldy@users.sourceforge.net>
  * Copyright (C) 2005-2009 Regis Houssin        <regis@dolibarr.fr>
- * Copyright (C) 2015      Alexandre Spangaro   <aspangaro.dolibarr@gmail.com>
+ * Copyright (C) 2015-2016 Alexandre Spangaro   <aspangaro.dolibarr@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -831,6 +831,7 @@ if ($action == "addline" && $user->rights->expensereport->creer)
 
 	$object_ligne = new ExpenseReportLine($db);
 
+	$vatrate = GETPOST('vatrate');
 	$object_ligne->comments = GETPOST('comments');
 	$qty  = GETPOST('qty','int');
 	if (empty($qty)) $qty=1;
@@ -843,10 +844,13 @@ if ($action == "addline" && $user->rights->expensereport->creer)
 
 	$object_ligne->fk_c_type_fees = GETPOST('fk_c_type_fees');
 
-	$object_ligne->fk_c_tva = GETPOST('fk_c_tva');
+	// if VAT is not used in Dolibarr, set VAT rate to 0 because VAT rate is necessary.
+	if (empty($vatrate)) $vatrate = "0.000";
+
 	$object_ligne->vatrate = price2num($vatrate);
 
 	$object_ligne->fk_projet = $fk_projet;
+	
 
 	if (! GETPOST('fk_c_type_fees') > 0)
 	{
@@ -854,10 +858,11 @@ if ($action == "addline" && $user->rights->expensereport->creer)
 		setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentitiesnoconv("Type")), null, 'errors');
 		$action='';
 	}
-	if (GETPOST('vatrate') < 0 || GETPOST('vatrate') == '')
+
+	if ($vatrate < 0 || $vatrate == '')
 	{
 		$error++;
-		setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentitiesnoconv("Vat")), null, 'errors');
+		setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentitiesnoconv("VAT")), null, 'errors');
 		$action='';
 	}
 
@@ -1096,7 +1101,7 @@ if ($action == 'create')
 	print '<table class="border" width="100%">';
 	print '<tbody>';
 	print '<tr>';
-	print '<td class="fieldrequired">'.$langs->trans("DateStart").'</td>';
+	print '<td class="titlefieldcreate fieldrequired">'.$langs->trans("DateStart").'</td>';
 	print '<td>';
 	$form->select_date($date_start?$date_start:-1,'date_debut',0,0,0,'',1,1);
 	print '</td>';
@@ -1211,7 +1216,7 @@ else
 				$linkback = '<a href="'.DOL_URL_ROOT.'/expensereport/list.php'.(! empty($socid)?'?socid='.$socid:'').'">'.$langs->trans("BackToList").'</a>';
 
             	// Ref
-            	print '<tr><td width="25%">'.$langs->trans("Ref").'</td><td>';
+            	print '<tr><td class="titlefield">'.$langs->trans("Ref").'</td><td>';
             	print $form->showrefnav($object, 'ref', $linkback, 1, 'ref', 'ref', '');
             	print '</td></tr>';
 
@@ -1374,7 +1379,7 @@ else
 				$linkback = '<a href="'.DOL_URL_ROOT.'/expensereport/list.php'.(! empty($socid)?'?socid='.$socid:'').'">'.$langs->trans("BackToList").'</a>';
 
             	// Ref
-            	print '<tr><td width="25%">'.$langs->trans("Ref").'</td><td colspan="2">';
+            	print '<tr><td class="titlefield">'.$langs->trans("Ref").'</td><td colspan="2">';
             	print $form->showrefnav($object, 'ref', $linkback, 1, 'ref', 'ref', '');
             	print '</td></tr>';
 
@@ -1683,7 +1688,8 @@ else
     								}
     								print '</td>';
 								}
-								print '<td style="text-align:center;">'.$langs->trans("TF_".strtoupper(empty($objp->type_fees_libelle)?'OTHER':$objp->type_fees_libelle)).'</td>';
+								// print '<td style="text-align:center;">'.$langs->trans("TF_".strtoupper(empty($objp->type_fees_libelle)?'OTHER':$objp->type_fees_libelle)).'</td>';
+								print '<td style="text-align:center;">'.($langs->trans(($objp->type_fees_code)) == $objp->type_fees_code ? $objp->type_fees_libelle : $langs->trans(($objp->type_fees_code))).'</td>';
 								print '<td style="text-align:left;">'.$objp->comments.'</td>';
 								print '<td style="text-align:right;">'.vatrate($objp->vatrate,true).'</td>';
 								print '<td style="text-align:right;">'.price($objp->value_unit).'</td>';
@@ -1786,24 +1792,21 @@ else
 					if (($object->fk_statut==0 || $object->fk_statut==99) && $action != 'editline' && $user->rights->expensereport->creer)
 					{
 						print '<tr class="liste_titre">';
-						print '<td colspan="2"></td>';
-						//print '<td style="text-align:center;">'.$langs->trans('Date').'</td>';
+						print '<td align="center">'.$langs->trans('Date').'</td>';
 						if (! empty($conf->projet->enabled)) print '<td>'.$langs->trans('Project').'</td>';
 						print '<td align="center">'.$langs->trans('Type').'</td>';
-						print '<td>'.$langs->trans('Description').'</td>';
-						print '<td style="text-align:right;">'.$langs->trans('VAT').'</td>';
-						print '<td style="text-align:right;">'.$langs->trans('PriceUTTC').'</td>';
-						print '<td style="text-align:right;">'.$langs->trans('Qty').'</td>';
+						print '<td colspan="2">'.$langs->trans('Description').'</td>';
+						print '<td align="right">'.$langs->trans('VAT').'</td>';
+						print '<td align="right">'.$langs->trans('PriceUTTC').'</td>';
+						print '<td align="right">'.$langs->trans('Qty').'</td>';
 						print '<td colspan="3"></td>';
 						print '</tr>';
 
 						
 						print '<tr '.$bc[true].'>';
 
-						print '<td></td>';
-						
 						// Select date
-						print '<td style="text-align:center;">';
+						print '<td align="center">';
 						$form->select_date($date?$date:-1,'date');
 						print '</td>';
 
@@ -1821,34 +1824,34 @@ else
 						print '</td>';
 
 						// Add comments
-						print '<td>';
+						print '<td colspan="2">';
 						print '<textarea class="flat_ndf centpercent" name="comments">'.$comments.'</textarea>';
 						print '</td>';
 
 						// Select VAT
-						print '<td style="text-align:right;">';
+						print '<td align="right">';
 						$defaultvat=-1;
 						if (! empty($conf->global->EXPENSEREPORT_NO_DEFAULT_VAT)) $conf->global->MAIN_VAT_DEFAULT_IF_AUTODETECT_FAILS = 'none';
 						print $form->load_tva('vatrate', ($vatrate!=''?$vatrate:$defaultvat), $mysoc, '', 0, 0, '', false);
 						print '</td>';
 
 						// Unit price
-						print '<td style="text-align:right;">';
+						print '<td align="right">';
 						print '<input type="text" size="5" name="value_unit" value="'.$value_unit.'">';
 						print '</td>';
 
 						// Quantity
-						print '<td style="text-align:right;">';
+						print '<td align="right">';
 						print '<input type="text" size="2" name="qty"  value="'.($qty?$qty:1).'">';
 						print '</td>';
 
 						if ($action != 'editline')
 						{
-						    print '<td style="text-align:right;"></td>';
-						    print '<td style="text-align:right;"></td>';
+						    print '<td align="right"></td>';
+						    print '<td align="right"></td>';
 						}
 
-						print '<td style="text-align:center;"><input type="submit" value="'.$langs->trans("Add").'" name="bouton" class="button"></td>';
+						print '<td align="center"><input type="submit" value="'.$langs->trans("Add").'" name="bouton" class="button"></td>';
 						
 						print '</tr>';
 					} // Fin si c'est payé/validé

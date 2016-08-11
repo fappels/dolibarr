@@ -5012,7 +5012,9 @@ class Form
      */
     static function multiSelectArrayWithCheckbox($htmlname, &$array, $varpage)
     {
-        global $user;
+        global $conf,$user;
+        
+        if (! empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER)) return '';
         
         $tmpvar="MAIN_SELECTEDFIELDS_".$varpage;
         if (! empty($user->conf->$tmpvar))
@@ -5310,6 +5312,7 @@ class Form
 				$i = 0;
 
 				print '<br><form action="" method="POST" name="LinkedOrder">';
+				print '<input type="hidden" name="id" value="'.$object->id.'">';
 				print '<table class="noborder">';
 				print '<tr class="liste_titre">';
 				print '<td class="nowrap"></td>';

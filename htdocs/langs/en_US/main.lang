@@ -256,6 +256,7 @@ DurationDays=days
 Year=Year
 Month=Month
 Week=Week
+WeekShort=Week
 Day=Day
 Hour=Hour
 Minute=Minute
@@ -702,6 +703,7 @@ RelatedObjects=Related Objects
 ClassifyBilled=Classify billed
 Progress=Progress
 ClickHere=Click here
+View=View
 # Week day
 Monday=Monday
 Tuesday=Tuesday
