@@ -635,6 +635,7 @@ div.myavailability {
 
 @media only screen and (max-width: 960px)
 {
+    .maxwidthonsmartphone { max-width: 100px; }
 	.minwidth50imp  { min-width: 50px !important; }
     .minwidth100imp { min-width: 50px !important; }
     .minwidth200imp { min-width: 100px !important; }
@@ -650,6 +651,7 @@ div.myavailability {
     .noenlargeonsmartphone { width : 50px !important; display: inline !important; }
     .maxwidthonsmartphone { max-width: 100px; }
     .maxwidth100onsmartphone { max-width: 100px; }
+    .maxwidth150onsmartphone { max-width: 150px; }
     .maxwidth200onsmartphone { max-width: 200px; }
     .maxwidth300onsmartphone { max-width: 300px; }
     .maxwidth400onsmartphone { max-width: 400px; }
@@ -3786,9 +3788,9 @@ div.ecmjqft {
 /* use or not ? */
 div.jnotify-background {
 	opacity : 0.95 !important;
-    -moz-box-shadow: 3px 3px 4px #888 !important;
-    -webkit-box-shadow: 3px 3px 4px #888 !important;
-    box-shadow: 3px 3px 4px #888 !important;
+    -moz-box-shadow: 2px 2px 4px #888 !important;
+    -webkit-box-shadow: 2px 2px 4px #888 !important;
+    box-shadow: 2px 2px 4px #888 !important;
 }
 
 /* ============================================================================== */
@@ -4308,7 +4310,6 @@ border-top-right-radius: 6px;
 .menu_choix1 a {
 	background: url('<?php echo dol_buildpath($path.'/theme/'.$theme.'/img/menus_black/money.png',1) ?>') top left no-repeat;
 }
-
 .menu_choix2 a {
 	background: url('<?php echo dol_buildpath($path.'/theme/'.$theme.'/img/menus_black/home.png',1) ?>') top left no-repeat;
 }
@@ -4325,12 +4326,34 @@ border-top-right-radius: 6px;
 	padding-top: 18px;
 	padding-left: 54px;
 	font-size: 14px;
-	height: 40px;
+	height: 38px;
 }
 .menu_choix1 a:hover,.menu_choix2 a:hover {
 	color: #6d3f6d;
 }
-
+.menu li.menu_choix1 {
+    padding-top: 6px;
+    padding-right: 10px;
+}
+.menu li.menu_choix2 {
+    padding-top: 6px;
+    padding-right: 10px;
+}
+@media only screen and (max-width: 767px)
+{
+	.menu_choix1 a, .menu_choix2 a {
+		background-size: 30px 30px;
+		height: 30px;
+		padding-left: 40px;
+	}
+    .menu li.menu_choix1, .menu li.menu_choix2 {
+        padding-left: 4px;
+        padding-right: 0;
+    }
+    .liste_articles {
+    	margin-right: 0 !important;
+    }
+}
 
 
 /* ============================================================================== */
