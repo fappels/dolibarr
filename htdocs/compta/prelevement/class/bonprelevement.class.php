@@ -22,7 +22,7 @@
 /**
  *      \file       htdocs/compta/prelevement/class/bonprelevement.class.php
  *      \ingroup    prelevement
- *      \brief      Fichier de la classe des bons de prelevements
+ *      \brief      File of withdrawal receipts class
  */
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
@@ -104,11 +104,11 @@ class BonPrelevement extends CommonObject
     }
 
     /**
-     * Add facture to withdrawal
+     * Add invoice to withdrawal
      *
      * @param	int		$facture_id 	id invoice to add
      * @param	int		$client_id  	id invoice customer
-     * @param	string	$client_nom 	name of cliente
+     * @param	string	$client_nom 	customer name
      * @param	int		$amount 		amount of invoice
      * @param	string	$code_banque 	code of bank withdrawal
      * @param	string	$code_guichet 	code of bank's office
@@ -166,7 +166,7 @@ class BonPrelevement extends CommonObject
      *
      *	@param	int		$line_id 		id line to add
      *	@param	int		$client_id  	id invoice customer
-     *	@param	string	$client_nom 	name of cliente
+     *	@param	string	$client_nom 	customer name
      *	@param	int		$amount 		amount of invoice
      *	@param	string	$code_banque 	code of bank withdrawal
      *	@param	string	$code_guichet 	code of bank's office
@@ -182,7 +182,7 @@ class BonPrelevement extends CommonObject
         if ($concat == 1)
         {
             /*
-             * On aggrege les lignes
+             * We aggregate the lines
              */
             $sql = "SELECT rowid";
             $sql.= " FROM  ".MAIN_DB_PREFIX."prelevement_lignes";
@@ -205,7 +205,7 @@ class BonPrelevement extends CommonObject
         else
         {
             /*
-             * Pas de d'agregation
+             * No aggregate
              */
             $sql = "INSERT INTO ".MAIN_DB_PREFIX."prelevement_lignes (";
             $sql.= "fk_prelevement_bons";
@@ -376,7 +376,7 @@ class BonPrelevement extends CommonObject
             }
 
             /*
-             * Fin de la procedure
+             * End of procedure
              */
             if ($error == 0)
             {
@@ -478,7 +478,7 @@ class BonPrelevement extends CommonObject
                                 $error++;
                             }
                         }
-                        // Update prelevement line
+                        // Update withdrawal line
                         // TODO: Translate to ligneprelevement.class.php
                         $sql = " UPDATE ".MAIN_DB_PREFIX."prelevement_lignes";
                         $sql.= " SET statut = 2";
@@ -605,8 +605,8 @@ class BonPrelevement extends CommonObject
         $arr = array();
 
         /*
-         * Renvoie toutes les factures presente
-         * dans un bon de prelevement
+         * Returns all invoices presented
+         * within a withdrawal receipt
          */
         $sql = "SELECT fk_facture";
         if ($amounts) $sql .= ", SUM(pl.amount)";
@@ -1565,7 +1565,7 @@ class BonPrelevement extends CommonObject
 		$XML_DEBITOR ='';
 		$XML_DEBITOR .='			<DrctDbtTxInf>'.$CrLf;
 		$XML_DEBITOR .='				<PmtId>'.$CrLf;
-		$XML_DEBITOR .='					<EndToEndId>'.('AS-'.$row_facnumber.'-'.$Rowing).'</EndToEndId>'.$CrLf;
+		$XML_DEBITOR .='					<EndToEndId>'.('AS-'.dol_trunc($row_facnumber,20).'-'.$Rowing).'</EndToEndId>'.$CrLf;          // ISO20022 states that EndToEndId has a MaxLength of 35 characters
 		$XML_DEBITOR .='				</PmtId>'.$CrLf;
 		$XML_DEBITOR .='				<InstdAmt Ccy="EUR">'.round($row_somme, 2).'</InstdAmt>'.$CrLf;
 		$XML_DEBITOR .='				<DrctDbtTx>'.$CrLf;
