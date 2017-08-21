@@ -120,7 +120,7 @@ class Interfaces
 
                         if (! $qualified)
                         {
-                            dol_syslog(get_class($this)."::run_triggers action=".$action." Triggers for file '".$file."' need module to be enabled", LOG_DEBUG);
+                            //dol_syslog(get_class($this)."::run_triggers action=".$action." Triggers for file '".$file."' need module to be enabled", LOG_DEBUG);
                             continue;
                         }
 
@@ -231,7 +231,7 @@ class Interfaces
      */
     function getTriggersList($forcedirtriggers=null)
     {
-        global $conf, $langs;
+        global $conf, $langs, $db;
 
         $files = array();
         $fullpath = array();
@@ -311,7 +311,7 @@ class Interfaces
             	continue;
             }
 
-            $objMod = new $modName($this->db);
+            $objMod = new $modName($db);
 
             // Define disabledbyname and disabledbymodule
             $disabledbyname=0;
