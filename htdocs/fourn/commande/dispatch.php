@@ -482,13 +482,13 @@ if ($id > 0 || ! empty($ref)) {
 		}
 
 		$sql = "SELECT l.rowid, l.fk_product, l.subprice, l.remise_percent, SUM(l.qty) as qty,";
-		$sql .= " p.ref, p.label, p.tobatch";
+		$sql .= " p.ref, p.label, p.tobatch, p.barcode";
 		$sql .= " FROM " . MAIN_DB_PREFIX . "commande_fournisseurdet as l";
 		$sql .= " LEFT JOIN " . MAIN_DB_PREFIX . "product as p ON l.fk_product=p.rowid";
 		$sql .= " WHERE l.fk_commande = " . $object->id;
 		if (empty($conf->global->STOCK_SUPPORTS_SERVICES))
 			$sql .= " AND l.product_type = 0";
-		$sql .= " GROUP BY p.ref, p.label, p.tobatch, l.rowid, l.fk_product, l.subprice, l.remise_percent"; // Calculation of amount dispatched is done per fk_product so we must group by fk_product
+		$sql .= " GROUP BY p.ref, p.label, p.tobatch, l.rowid, l.fk_product, l.subprice, l.remise_percent, p.barcode"; // Calculation of amount dispatched is done per fk_product so we must group by fk_product
 		$sql .= " ORDER BY p.ref, p.label";
 
 		$resql = $db->query($sql);
@@ -582,6 +582,12 @@ if ($id > 0 || ! empty($ref)) {
 						// Already dispatched
 						print '<td align="right">' . $products_dispatched[$objp->rowid] . '</td>';
 
+						// hidden fields for js function
+						print '<input id="qty_ordered' . $suffix . '" type="hidden" value="' . $objp->qty . '">';
+						print '<input id="qty_dispatched' . $suffix . '" type="hidden" value="' . ( float ) $products_dispatched[$objp->rowid] . '">';
+						print '<input id="barcode' . $suffix . '" type="hidden" value="' . $objp->barcode . '">';
+						
+
 						if (! empty($conf->productbatch->enabled) && $objp->tobatch == 1) {
 							$type = 'batch';
 							print '<td align="right">';
@@ -607,9 +613,7 @@ if ($id > 0 || ! empty($ref)) {
 							    print '<input class="maxwidth75" name="pu' . $suffix . '" type="hidden" value="' . price2num($up_ht_disc, 'MU') . '">';
 							}
 
-							// hidden fields for js function
-							print '<input id="qty_ordered' . $suffix . '" type="hidden" value="' . $objp->qty . '">';
-							print '<input id="qty_dispatched' . $suffix . '" type="hidden" value="' . ( float ) $products_dispatched[$objp->rowid] . '">';
+							
 							print '</td>';
 
 							print '<td>';
@@ -648,16 +652,12 @@ if ($id > 0 || ! empty($ref)) {
 							{
 							    print '<input class="maxwidth75" name="pu' . $suffix . '" type="hidden" value="' . price2num($up_ht_disc, 'MU') . '">';
 							}
-
-							// hidden fields for js function
-							print '<input id="qty_ordered' . $suffix . '" type="hidden" value="' . $objp->qty . '">';
-							print '<input id="qty_dispatched' . $suffix . '" type="hidden" value="' . ( float ) $products_dispatched[$objp->rowid] . '">';
 							print '</td>';
 						}
 
 						// Qty to dispatch
 						print '<td align="right">';
-						print '<input id="qty' . $suffix . '" name="qty' . $suffix . '" type="text" size="8" value="' . (GETPOST('qty' . $suffix) != '' ? GETPOST('qty' . $suffix) : $remaintodispatch) . '">';
+						print '<input id="qty' . $suffix . '" name="qty' . $suffix . '" type="text" size="8" value="' . (GETPOST('qty' . $suffix) != '' ? GETPOST('qty' . $suffix) : 0) . '">';
                         print '</td>';
 
                         print '<td>';
@@ -859,5 +859,9 @@ if ($id > 0 || ! empty($ref)) {
 }
 
 llxFooter();
+
+// barcode dialog template
+include DOL_DOCUMENT_ROOT . '/fourn/commande/tpl/barcodedialog.tpl.php';
+
 
 $db->close();
