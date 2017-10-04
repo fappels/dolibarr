@@ -2,6 +2,48 @@
 English Dolibarr ChangeLog
 --------------------------------------------------------------
 
+***** ChangeLog for 6.0.1 compared to 6.0.* *****
+
+FIX: #7000 Dashboard link for late pending payment supplier invoices do not work
+FIX: #7325 Default VAT rate when editing template invoices is 0%
+FIX: #7330
+FIX: #7359
+FIX: #7367
+FIX: #7368
+FIX: #7391
+FIX: #7420
+FIX: Add some missing attributes in Adherent:makeSubstitution (type, phone…
+FIX: Bad const name
+FIX: Bad link to unpayed suppliers invoices
+FIX: Better protection to no send email when we change limit
+FIX: Calculation in the activity box
+FIX: Clean bad parameters when inserting line of template invoice
+FIX: dateSelector was not taken into account
+FIX: hidden option MAIN_PROPAGATE_CONTACTS_FROM_ORIGIN
+FIX: journalization for bank journal should not rely on a label.
+FIX: menu enty when url is external link
+FIX: missing supplier qty and supplier discount in available fields for product export.
+FIX: multicompany better accuracy in rounding and with revenue stamp.
+FIX: Must use pdf format page as default for merging PDF.
+FIX: PDF output was sharing 2 different currencies in same total
+FIX: Position of signature on strato template
+FIX: Protection to avoid to apply credit note discount > remain to pay
+FIX: Remove warning when using log into syslog
+FIX: Responsive
+FIX: Security fixes (filter onload js, less verbose error message in
+FIX: SEPA recording payment must save one payment in bank per customer
+FIX: Several problem with the last event box on project/tasks
+FIX: Sign of amount in origin currency on credit note created from lines
+FIX: Some page of admin were not responsive
+FIX: SQL injection
+FIX: time.php crashed without project id in param
+FIX: transfer of line extrafields from order to invoice
+FIX: Upgrade missing on field
+FIX: View of timespent for another user
+FIX: ODT generation
+FIX: CVE-2017-9840, CVE-2017-14238, CVE-2017-14239, CVE-2017-14240, CVE-2017-14241,
+     CVE-2017-14242 
+
 ***** ChangeLog for 6.0.0 compared to 5.0.* *****
 
 NEW: Add experimental BlockeLog module (to log business events in a non reversible log file).
@@ -9,7 +51,7 @@ NEW: Add a payment module for Stripe.
 NEW: Add module "Product variant" (like red, blue for the product shoes)
 NEW: Accountancy - Activate multi-journal & Add journal_label to database (FEC)
 NEW: Add a tracking id into mass emailing.
-NEW: Tax system more compatible with the new tax roollout in India (IGST / CGST / SGST).
+NEW: Tax system more compatible with the new tax rollout in India (IGST / CGST / SGST).
 NEW: Add calculation function for Loan schedule
 NEW: Add "depends on" and "required by" into module informations
 NEW: Add hidden option THIRDPARTY_INCLUDE_PARENT_IN_LINKTO
@@ -152,6 +194,40 @@ Following changes may create regression for some external modules, but were nece
 content by doing a print into function, sometimes by returning content into "resprint". This has been fixed to follow
 hook specifications so you must return output into "resprint".
 
+***** ChangeLog for 5.0.6 compared to 5.0.5 *****
+FIX: Removed a bad symbolic link into custom directory.
+FIX: Renaming a resource ref rename also the directory of attached files.
+
+***** ChangeLog for 5.0.5 compared to 5.0.4 *****
+FIX: #7075 : bad path for document
+FIX: #7156
+FIX: #7173
+FIX: #7224
+FIX: #7226
+FIX: #7239
+FIX: add supplierproposaldet without price (new product)
+FIX: amount overlap other amount when a pagebreak is done due to an image at the bottom of page.
+FIX: Bad tax calculation with expense report
+FIX: Best buy price calculation
+FIX: Buying prices must always be in positive value.
+FIX: calculate correct remain to pay for planned bank transactions
+FIX: delete linked element on facture rec
+FIX: edit sociale was emptying label
+FIX: Error when updating thirdparty not returned
+FIX: holidays with postgresql like on rowid integer
+FIX: id of user not saved when making a payment of expense report
+FIX: invoice page list
+FIX: invoice situation VAT total rounding into PDF crabe
+FIX: PgSQL compatibility.
+FIX: remove order rights on invoice page
+FIX: status were wrong on product referent list
+FIX: supplier id was not passed to hooks
+FIX: Support of vat code when using price per customer
+FIX: User id correction on holiday request
+FIX: value of user id filled to 0 in llx_bank_url when recording an expense report.
+FIX: we have to check if contact doesn't already exist on add_contact() function
+FIX: We should be able to insert data with value '0' into const
+FIX: install process with DoliWamp
 
 ***** ChangeLog for 5.0.4 compared to 5.0.3 *****
 FIX: #5640 Prices of a predefined product/service were incorrect under certain circumstances
