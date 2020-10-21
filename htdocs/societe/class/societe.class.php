@@ -464,6 +464,7 @@ class Societe extends CommonObject
 	public $remise_supplier_percent;
 	public $mode_reglement_supplier_id;
 	public $cond_reglement_supplier_id;
+    public $transport_mode_supplier_id;
 
 	/**
      * @var int ID
@@ -763,7 +764,7 @@ class Societe extends CommonObject
 		$this->tva_assuj = 1;
 		$this->status = 1;
 
-		if ($conf->global->COMPANY_SHOW_ADDRESS_SELECTLIST) {
+		if (! empty($conf->global->COMPANY_SHOW_ADDRESS_SELECTLIST)) {
 			$this->fields['address']['showoncombobox'] = $conf->global->COMPANY_SHOW_ADDRESS_SELECTLIST;
 			$this->fields['zip']['showoncombobox'] = $conf->global->COMPANY_SHOW_ADDRESS_SELECTLIST;
 			$this->fields['town']['showoncombobox'] = $conf->global->COMPANY_SHOW_ADDRESS_SELECTLIST;
@@ -1307,8 +1308,10 @@ class Societe extends CommonObject
 
 			$sql .= ",mode_reglement = ".(!empty($this->mode_reglement_id) ? "'".$this->db->escape($this->mode_reglement_id)."'" : "null");
 			$sql .= ",cond_reglement = ".(!empty($this->cond_reglement_id) ? "'".$this->db->escape($this->cond_reglement_id)."'" : "null");
-			$sql .= ",mode_reglement_supplier = ".(!empty($this->mode_reglement_supplier_id) ? "'".$this->db->escape($this->mode_reglement_supplier_id)."'" : "null");
+			$sql .= ",transport_mode = ".(! empty($this->transport_mode_id) ? "'".$this->db->escape($this->transport_mode_id)."'" : "null");
+            $sql .= ",mode_reglement_supplier = ".(!empty($this->mode_reglement_supplier_id) ? "'".$this->db->escape($this->mode_reglement_supplier_id)."'" : "null");
 			$sql .= ",cond_reglement_supplier = ".(!empty($this->cond_reglement_supplier_id) ? "'".$this->db->escape($this->cond_reglement_supplier_id)."'" : "null");
+			$sql .= ",transport_mode_supplier = ".(! empty($this->transport_mode_supplier_id)? "'".$this->db->escape($this->transport_mode_supplier_id)."'" : "null");
 			$sql .= ",fk_shipping_method = ".(!empty($this->shipping_method_id) ? "'".$this->db->escape($this->shipping_method_id)."'" : "null");
 
 			$sql .= ",client = ".(!empty($this->client) ? $this->client : 0);
@@ -1646,13 +1649,15 @@ class Societe extends CommonObject
 				$this->remise_supplier_percent = $obj->remise_supplier;
 				$this->mode_reglement_id 	= $obj->mode_reglement;
 				$this->cond_reglement_id 	= $obj->cond_reglement;
+				$this->transport_mode_id 	= $obj->transport_mode;
 				$this->mode_reglement_supplier_id 	= $obj->mode_reglement_supplier;
 				$this->cond_reglement_supplier_id 	= $obj->cond_reglement_supplier;
-				$this->shipping_method_id = ($obj->fk_shipping_method > 0) ? $obj->fk_shipping_method : null;
-				$this->fk_account = $obj->fk_account;
+				$this->transport_mode_supplier_id	= $obj->transport_mode_supplier;
+				$this->shipping_method_id			= ($obj->fk_shipping_method > 0) ? $obj->fk_shipping_method : null;
+				$this->fk_account	= $obj->fk_account;
 
-				$this->client      = $obj->client;
-				$this->fournisseur = $obj->fournisseur;
+				$this->client		= $obj->client;
+				$this->fournisseur	= $obj->fournisseur;
 
 				$this->note = $obj->note_private; // TODO Deprecated for backward comtability
 				$this->note_private = $obj->note_private;
@@ -2353,11 +2358,12 @@ class Societe extends CommonObject
 				$code .= $this->code_fournisseur.' - ';
 			}
 
-			if ($conf->global->SOCIETE_ADD_REF_IN_LIST == 1)
-			{
-				$name = $code.' '.$name;
-			} else {
-				$name = $code;
+			if ($code) {
+				if ($conf->global->SOCIETE_ADD_REF_IN_LIST == 1) {
+					$name = $code.' '.$name;
+				} else {
+					$name = $code;
+				}
 			}
 		}
 
@@ -4086,9 +4092,10 @@ class Societe extends CommonObject
 	 *  Return amount of bill not paid and total
 	 *
 	 *  @param     string      $mode    'customer' or 'supplier'
+	 *  @param     int      $late    	0 => all invoice, 1=> only late
 	 *  @return		array				array('opened'=>Amount, 'total'=>Total amount)
 	 */
-    public function getOutstandingBills($mode = 'customer')
+    public function getOutstandingBills($mode = 'customer', $late = 0)
 	{
 		$table = 'facture';
 		if ($mode == 'supplier') $table = 'facture_fourn';
@@ -4103,6 +4110,9 @@ class Societe extends CommonObject
 		if ($mode == 'supplier') $sql = "SELECT rowid, total_ht as total_ht, total_ttc, paye, type, fk_statut as status, close_code FROM ".MAIN_DB_PREFIX.$table." as f";
 		else $sql = "SELECT rowid, total as total_ht, total_ttc, paye, fk_statut as status, close_code FROM ".MAIN_DB_PREFIX.$table." as f";
 		$sql .= " WHERE fk_soc = ".$this->id;
+		if (!empty($late)) {
+			$sql .= " AND date_lim_reglement < '".$this->db->idate(dol_now())."'";
+		}
 		if ($mode == 'supplier') {
 			$sql .= " AND entity IN (".getEntity('facture_fourn').")";
 		} else {

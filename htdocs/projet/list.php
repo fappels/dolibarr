@@ -109,7 +109,7 @@ if ($search_status == '') $search_status = -1; // -1 or 1
 
 if (!empty($conf->categorie->enabled))
 {
-	$search_category_array = GETPOST("search_category_".Categorie::TYPE_PROJECT."_array", "array");
+	$search_category_array = GETPOST("search_category_".Categorie::TYPE_PROJECT."_list", "array");
 }
 
 // Initialize technical object to manage hooks of page. Note that conf->hooks_modules contains array of hook context
@@ -284,7 +284,7 @@ $formproject = new FormProjets($db);
 $title = $langs->trans("Projects");
 
 
-// Get list of project id allowed to user (in a string list separated by coma)
+// Get list of project id allowed to user (in a string list separated by comma)
 $projectsListId = '';
 if (!$user->rights->projet->all->lire) $projectsListId = $object->getProjectsAuthorizedForUser($user, 0, 1, $socid);
 
@@ -386,7 +386,7 @@ if (empty($conf->global->MAIN_DISABLE_FULL_SCANLIST))
 {
 	$result = $db->query($sql);
 	$nbtotalofrecords = $db->num_rows($result);
-	if (($page * $limit) > $nbtotalofrecords)	// if total resultset is smaller then paging size (filtering), goto and load page 0
+	if (($page * $limit) > $nbtotalofrecords)	// if total resultset is smaller than paging size (filtering), goto and load page 0
 	{
 		$page = 0;
 		$offset = 0;

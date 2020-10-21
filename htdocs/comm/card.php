@@ -487,6 +487,27 @@ if ($object->id > 0)
 		print '</tr>';
 	}
 
+    if (! empty($conf->intracommreport->enabled))
+    {
+        // Transport mode by default
+        print '<tr><td class="nowrap">';
+        print '<table class="centpercent nobordernopadding"><tr><td class="nowrap">';
+        print $langs->trans('IntracommReportTransportMode');
+        print '<td>';
+        if (($action != 'edittransportmode') && $user->rights->societe->creer) print '<td class="right"><a class="editfielda" href="'.$_SERVER["PHP_SELF"].'?action=edittransportmode&amp;socid='.$object->id.'">'.img_edit($langs->trans('SetMode'), 1).'</a></td>';
+        print '</tr></table>';
+        print '</td><td>';
+        if ($action == 'edittransportmode')
+        {
+            $form->formSelectTransportMode($_SERVER['PHP_SELF'].'?socid='.$object->id, $object->fk_transport_mode, 'fk_transport_mode', 1);
+        }
+        else {
+            $form->formSelectTransportMode($_SERVER['PHP_SELF'].'?socid='.$object->id, $object->fk_transport_mode, 'none');
+        }
+        print "</td>";
+        print '</tr>';
+    }
+
 	// Categories
 	if (!empty($conf->categorie->enabled) && !empty($user->rights->categorie->lire)) {
 		$langs->load("categories");
@@ -618,10 +639,11 @@ if ($object->id > 0)
 	if (!empty($conf->facture->enabled) && $user->rights->facture->lire)
 	{
 		// Box factures
-		$tmp = $object->getOutstandingBills();
+		$tmp = $object->getOutstandingBills('customer', 0);
 		$outstandingOpened = $tmp['opened'];
 		$outstandingTotal = $tmp['total_ht'];
 		$outstandingTotalIncTax = $tmp['total_ttc'];
+
 		$text = $langs->trans("OverAllInvoices");
 		$link = DOL_URL_ROOT.'/compta/facture/list.php?socid='.$object->id;
 		$icon = 'bill';
@@ -647,6 +669,24 @@ if ($object->id > 0)
 		$boxstat .= '<span class="boxstatsindicator'.($outstandingOpened > 0 ? ' amountremaintopay' : '').'">'.price($outstandingOpened, 1, $langs, 1, -1, -1, $conf->currency).$warn.'</span>';
 		$boxstat .= '</div>';
 		if ($link) $boxstat .= '</a>';
+
+		$tmp = $object->getOutstandingBills('customer', 1);
+		$outstandingOpenedLate = $tmp['opened'];
+		if ($outstandingOpened != $outstandingOpenedLate && !empty($outstandingOpenedLate)) {
+			$warn = '';
+			if ($object->outstanding_limit != '' && $object->outstanding_limit < $outstandingOpenedLate) {
+				$warn = ' ' . img_warning($langs->trans("OutstandingBillReached"));
+			}
+			$text = $langs->trans("CurrentOutstandingBillLate");
+			$link = DOL_URL_ROOT . '/compta/recap-compta.php?socid=' . $object->id;
+			$icon = 'bill';
+			if ($link) $boxstat .= '<a href="' . $link . '" class="boxstatsindicator thumbstat nobold nounderline">';
+			$boxstat .= '<div class="boxstats" title="' . dol_escape_htmltag($text) . '">';
+			$boxstat .= '<span class="boxstatstext">' . img_object("", $icon) . ' <span>' . $text . '</span></span><br>';
+			$boxstat .= '<span class="boxstatsindicator' . ($outstandingOpenedLate > 0 ? ' amountremaintopay' : '') . '">'.price($outstandingOpenedLate, 1, $langs, 1, -1, -1, $conf->currency) . $warn . '</span>';
+			$boxstat .= '</div>';
+			if ($link) $boxstat .= '</a>';
+		}
 	}
 
 	$parameters = array();

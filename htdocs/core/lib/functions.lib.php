@@ -664,8 +664,7 @@ function checkVal($out = '', $check = 'alphanohtml', $filter = null, $options = 
 			}
 			break;
 		case 'restricthtml':		// Recommended for most html textarea
-			$out = dol_string_onlythesehtmltags($out, 0);
-			// TODO We can also remove all javascripts reference
+			$out = dol_string_onlythesehtmltags($out, 0, 1, 1);
 			break;
 		case 'custom':
 			if (empty($filter)) return 'BadFourthParameterForGETPOST';
@@ -1001,17 +1000,25 @@ function dol_string_nospecial($str, $newstr = '_', $badcharstoreplace = '')
 
 
 /**
- *	Clean a string from all non printable ascii chars (0x00-0x1F and 0x7F). It removes also CR-LF
+ *	Clean a string from all non printable ASCII chars (0x00-0x1F and 0x7F). It can also removes also Tab-CR-LF. UTF8 chars remains.
  *  This can be used to sanitize a string and view its real content. Some hacks try to obfuscate attacks by inserting non printable chars.
- *
+ *  Note, for information: UTF8 on 1 byte are: \x00-\7F
+ *                                 2 bytes are: byte 1 \xc0-\xdf, byte 2 = \x80-\xbf
+ *                                 3 bytes are: byte 1 \xe0-\xef, byte 2 = \x80-\xbf, byte 3 = \x80-\xbf
+ *                                 4 bytes are: byte 1 \xf0-\xf7, byte 2 = \x80-\xbf, byte 3 = \x80-\xbf, byte 4 = \x80-\xbf
  *	@param	string	$str            	String to clean
+ *  @param	int		$removetabcrlf		Remove also CR-LF
  * 	@return string          			Cleaned string
  *
  * 	@see    		dol_sanitizeFilename(), dol_string_unaccent(), dol_string_nospecial()
  */
-function dol_string_nounprintableascii($str)
+function dol_string_nounprintableascii($str, $removetabcrlf = 1)
 {
-	return preg_replace('/[\x00-\x1F\x7F]/u', '', $str);
+	if ($removetabcrlf) {
+		return preg_replace('/[\x00-\x1F\x7F]/u', '', $str);	// /u operator makes UTF8 valid characters being ignored so are not included into the replace
+	} else {
+		return preg_replace('/[\x00-\x08\x11-\x12\x14-\x1F\x7F]/u', '', $str);	// /u operator should make UTF8 valid characters being ignored so are not included into the replace
+	}
 }
 
 
@@ -1522,8 +1529,9 @@ function dol_banner_tab($object, $paramid, $morehtml = '', $shownav = 1, $fieldi
 		$showimage = $object->is_photo_available($conf->product->multidir_output[$entity]);
 		$maxvisiblephotos = (isset($conf->global->PRODUCT_MAX_VISIBLE_PHOTO) ? $conf->global->PRODUCT_MAX_VISIBLE_PHOTO : 5);
 		if ($conf->browser->layout == 'phone') $maxvisiblephotos = 1;
-		if ($showimage) $morehtmlleft .= '<div class="floatleft inline-block valignmiddle divphotoref">'.$object->show_photos('product', $conf->product->multidir_output[$entity], 'small', $maxvisiblephotos, 0, 0, 0, $width, 0).'</div>';
-		else {
+		if ($showimage) {
+			$morehtmlleft .= '<div class="floatleft inline-block valignmiddle divphotoref">'.$object->show_photos('product', $conf->product->multidir_output[$entity], 'small', $maxvisiblephotos, 0, 0, 0, $width, 0).'</div>';
+		} else {
 			if (!empty($conf->global->PRODUCT_NODISPLAYIFNOPHOTO)) {
 				$nophoto = '';
 				$morehtmlleft .= '<div class="floatleft inline-block valignmiddle divphotoref"></div>';
@@ -1605,14 +1613,14 @@ function dol_banner_tab($object, $paramid, $morehtml = '', $shownav = 1, $fieldi
 
 					if ($pdfexists && !$error)
 					{
-						$heightforphotref = 70;
+						$heightforphotref = 80;
 						if (!empty($conf->dol_optimize_smallscreen)) $heightforphotref = 60;
 						// If the preview file is found
 						if (file_exists($fileimage))
 						{
-							$phototoshow = '<div class="floatleft inline-block valignmiddle divphotoref"><div class="photoref">';
+							$phototoshow = '<div class="photoref">';
 							$phototoshow .= '<img height="'.$heightforphotref.'" class="photo photowithmargin photowithborder" src="'.DOL_URL_ROOT.'/viewimage.php?modulepart=apercu'.$modulepart.'&amp;file='.urlencode($relativepathimage).'">';
-							$phototoshow .= '</div></div>';
+							$phototoshow .= '</div>';
 						}
 					}
 				} elseif (!$phototoshow)
@@ -2044,15 +2052,13 @@ function dol_print_date($time, $format = '', $tzoutput = 'tzserver', $outputlang
 
 /**
  *  Return an array with locale date info.
- *  PHP getdate is restricted to the years 1901-2038 on Unix and 1970-2038 on Windows
- *  WARNING: This function always use PHP server timezone to return locale informations !!!
- *  Usage must be avoid.
- *  FIXME: Replace this with PHP date function and a parameter $gm
+ *  WARNING: This function use PHP server timezone by default to return locale informations.
+ *  Be aware to add the third parameter to "UTC" if you need to work on UTC.
  *
  *	@param	int			$timestamp      Timestamp
- *	@param	boolean		$fast           Fast mode
+ *	@param	boolean		$fast           Fast mode. deprecated.
+ *  @param	string		$forcetimezone	'' to use the PHP server timezone. Or use a form like 'Europe/Paris' or '+0200' to force timezone.
  *	@return	array						Array of informations
- *										If no fast mode:
  *										'seconds' => $secs,
  *										'minutes' => $min,
  *										'hours' => $hour,
@@ -2060,34 +2066,42 @@ function dol_print_date($time, $format = '', $tzoutput = 'tzserver', $outputlang
  *										'wday' => $dow,		0=sunday, 6=saturday
  *										'mon' => $month,
  *										'year' => $year,
- *										'yday' => floor($secsInYear/$_day_power),
- *										'weekday' => gmdate('l',$_day_power*(3+$dow)),
- *										'month' => gmdate('F',mktime(0,0,0,$month,2,1971)),
- *										If fast mode:
- *										'seconds' => $secs,
- *										'minutes' => $min,
- *										'hours' => $hour,
- *										'mday' => $day,
- *										'mon' => $month,
- *										'year' => $year,
- *										'yday' => floor($secsInYear/$_day_power),
- *										'leap' => $leaf,
- *										'ndays' => $ndays
+ *										'yday' => floor($secsInYear/$_day_power)
+ *										'0' => original timestamp
  * 	@see 								dol_print_date(), dol_stringtotime(), dol_mktime()
  */
-function dol_getdate($timestamp, $fast = false)
+function dol_getdate($timestamp, $fast = false, $forcetimezone = '')
 {
 	global $conf;
 
-	$usealternatemethod = false;
-	if ($timestamp <= 0) $usealternatemethod = true; // <= 1970
-	if ($timestamp >= 2145913200) $usealternatemethod = true; // >= 2038
-
-	if ($usealternatemethod)
-	{
-		$arrayinfo = adodb_getdate($timestamp, $fast);
+	if (empty($conf->global->MAIN_USE_OLD_FUNCTIONS_FOR_GETDATE)) {
+		//$datetimeobj = new DateTime('@'.$timestamp);
+		$datetimeobj = new DateTime();
+		$datetimeobj->setTimestamp($timestamp);	// Use local PHP server timezone
+		if ($forcetimezone) $datetimeobj->setTimezone(new DateTimeZone($forcetimezone));		//  (add timezone relative to the date entered)
+		$arrayinfo = array(
+			'year'=>((int) date_format($datetimeobj, 'Y')),
+			'mon'=>((int) date_format($datetimeobj, 'm')),
+			'mday'=>((int) date_format($datetimeobj, 'd')),
+			'wday'=>((int) date_format($datetimeobj, 'w')),
+			'yday'=>((int) date_format($datetimeobj, 'z')),
+			'hours'=>((int) date_format($datetimeobj, 'H')),
+			'minutes'=>((int) date_format($datetimeobj, 'i')),
+			'seconds'=>((int) date_format($datetimeobj, 's')),
+			'0'=>$timestamp
+		);
 	} else {
-		$arrayinfo = getdate($timestamp);
+		// PHP getdate is restricted to the years 1901-2038 on Unix and 1970-2038 on Windows
+		$usealternatemethod = false;
+		if ($timestamp <= 0) $usealternatemethod = true; // <= 1970
+		if ($timestamp >= 2145913200) $usealternatemethod = true; // >= 2038
+
+		if ($usealternatemethod)
+		{
+			$arrayinfo = adodb_getdate($timestamp, $fast);
+		} else {
+			$arrayinfo = getdate($timestamp);
+		}
 	}
 
 	return $arrayinfo;
@@ -3185,7 +3199,7 @@ function img_picto($titlealt, $picto, $moreatt = '', $pictoisfullpath = false, $
 				'trip'=>'wallet', 'group'=>'users',
 				'sign-out'=>'sign-out-alt',
 				'switch_off'=>'toggle-off', 'switch_on'=>'toggle-on', 'check'=>'check', 'bookmark'=>'star', 'bookmark'=>'star',
-				'bank'=>'university', 'close_title'=>'window-close', 'delete'=>'trash', 'edit'=>'pencil-alt', 'filter'=>'filter',
+				'bank'=>'university', 'close_title'=>'times', 'delete'=>'trash', 'edit'=>'pencil-alt', 'filter'=>'filter',
 				'list-alt'=>'list-alt', 'calendar'=>'calendar-alt', 'calendarweek'=>'calendar-week', 'calendarmonth'=>'calendar-alt', 'calendarday'=>'calendar-day', 'calendarperuser'=>'table',
 				'intervention'=>'ambulance', 'invoice'=>'file-invoice-dollar', 'multicurrency'=>'dollar-sign', 'order'=>'file-invoice',
 				'error'=>'exclamation-triangle', 'warning'=>'exclamation-triangle',
@@ -5610,7 +5624,7 @@ function dol_string_nohtmltag($stringtoclean, $removelinefeed = 1, $pagecodeto =
 	$temp = preg_replace('/<br[^>]*>/i', "\n", $stringtoclean);
 
 	// We remove entities BEFORE stripping (in case of a separator char is encoded and not the other, the strip will fails)
-	$temp = dol_html_entity_decode($temp, ENT_COMPAT, $pagecodeto);
+	$temp = dol_html_entity_decode($temp, ENT_COMPAT|ENT_HTML5, $pagecodeto);
 
 	if ($strip_tags) {
 		$temp = strip_tags($temp);
@@ -5639,13 +5653,14 @@ function dol_string_nohtmltag($stringtoclean, $removelinefeed = 1, $pagecodeto =
  *	Clean a string to keep only desirable HTML tags.
  *
  *	@param	string	$stringtoclean			String to clean
- *  @param	boolean	$cleanalsosomestyles	Remove absolute/fixed positioning from inline styles
- *  @param	boolean	$removeclassattribute	Remove the class attribute from tags
+ *  @param	int		$cleanalsosomestyles	Remove absolute/fixed positioning from inline styles
+ *  @param	int		$removeclassattribute	Remove the class attribute from tags
+ *  @param	int		$cleanalsojavascript	Remove also occurence of (javascript:'
  *	@return string	    					String cleaned
  *
  * 	@see	dol_escape_htmltag() strip_tags() dol_string_nohtmltag() dol_string_neverthesehtmltags()
  */
-function dol_string_onlythesehtmltags($stringtoclean, $cleanalsosomestyles = 1, $removeclassattribute = 1)
+function dol_string_onlythesehtmltags($stringtoclean, $cleanalsosomestyles = 1, $removeclassattribute = 1, $cleanalsojavascript = 0)
 {
 	$allowed_tags = array(
 		"html", "head", "meta", "body", "article", "a", "abbr", "b", "blockquote", "br", "cite", "div", "dl", "dd", "dt", "em", "font", "img", "ins", "hr", "i", "li", "link",
@@ -5655,22 +5670,29 @@ function dol_string_onlythesehtmltags($stringtoclean, $cleanalsosomestyles = 1, 
 	$allowed_tags_string = join("><", $allowed_tags);
 	$allowed_tags_string = '<'.$allowed_tags_string.'>';
 
-	if ($cleanalsosomestyles) {
-		$stringtoclean = preg_replace('/position\s*:\s*(absolute|fixed)\s*!\s*important/i', '', $stringtoclean); // Note: If hacker try to introduce css comment into string to bypass this regex, the string must also be encoded by the dol_htmlentitiesbr during output so it become harmless
-	}
-	if ($removeclassattribute) {
-		$stringtoclean = preg_replace('/(<[^>]+)\s+class=((["\']).*?\\3|\\w*)/i', '\\1', $stringtoclean);
-	}
-	// TODO Remove '/href=("|\'|)javascript/' string ?
+	$stringtoclean = dol_string_nounprintableascii($stringtoclean, 0);
+	$stringtoclean = preg_replace('/&colon;/i', ':', $stringtoclean);
 
 	$temp = strip_tags($stringtoclean, $allowed_tags_string);
+
+	if ($cleanalsosomestyles) {	// Clean for remaining html tags
+		$stringtoclean = preg_replace('/position\s*:\s*(absolute|fixed)\s*!\s*important/i', '', $temp); // Note: If hacker try to introduce css comment into string to bypass this regex, the string must also be encoded by the dol_htmlentitiesbr during output so it become harmless
+	}
+	if ($removeclassattribute) {	// Clean for remaining html tags
+		$stringtoclean = preg_replace('/(<[^>]+)\s+class=((["\']).*?\\3|\\w*)/i', '\\1', $temp);
+	}
+
+	// Remove 'javascript:' that we should not find into a text with
+	if ($cleanalsojavascript) {
+		$temp = preg_replace('/javascript\s*:/i', '', $temp);
+	}
 
 	return $temp;
 }
 
 /**
  *	Clean a string from some undesirable HTML tags.
- *  Note. Not enough secured as dol_string_onlythesehtmltags().
+ *  Note. Not as secured as dol_string_onlythesehtmltags().
  *
  *	@param	string	$stringtoclean			String to clean
  *  @param	array	$disallowed_tags		Array of tags not allowed
@@ -5814,7 +5836,7 @@ function dol_htmlentitiesbr($stringtoencode, $nl2brmode = 0, $pagecodefrom = 'UT
  */
 function dol_htmlentitiesbr_decode($stringtodecode, $pagecodeto = 'UTF-8')
 {
-	$ret = dol_html_entity_decode($stringtodecode, ENT_COMPAT, $pagecodeto);
+	$ret = dol_html_entity_decode($stringtodecode, ENT_COMPAT|ENT_HTML5, $pagecodeto);
 	$ret = preg_replace('/'."\r\n".'<br(\s[\sa-zA-Z_="]*)?\/?>/i', "<br>", $ret);
 	$ret = preg_replace('/<br(\s[\sa-zA-Z_="]*)?\/?>'."\r\n".'/i', "\r\n", $ret);
 	$ret = preg_replace('/<br(\s[\sa-zA-Z_="]*)?\/?>'."\n".'/i', "\n", $ret);
@@ -5838,7 +5860,7 @@ function dol_htmlcleanlastbr($stringtodecode)
  * Replace html_entity_decode functions to manage errors
  *
  * @param   string	$a					Operand a
- * @param   string	$b					Operand b (ENT_QUOTES=convert simple and double quotes)
+ * @param   string	$b					Operand b (ENT_QUOTES|ENT_HTML5=convert simple, double quotes, colon, e accent, ...)
  * @param   string	$c					Operand c
  * @param	string	$keepsomeentities	Entities but &, <, >, " are not converted.
  * @return  string						String decoded
