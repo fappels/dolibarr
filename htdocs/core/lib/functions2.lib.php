@@ -484,15 +484,15 @@ function dolAddEmailTrackId($email, $trackingid)
 }
 
 /**
- *	Return true if email has a domain name that can't be resolved
+ *	Return true if email has a domain name that can be resolved to MX type.
  *
  *	@param	string	$mail       Email address (Ex: "toto@example.com", "John Do <johndo@example.com>")
- *	@return boolean     		True if domain email is OK, False if KO
+ *	@return int     			-1 if error (function not available), 0=Not valid, 1=Valid
  */
 function isValidMailDomain($mail)
 {
 	list($user, $domain) = explode("@", $mail, 2);
-	return checkdnsrr($domain, "MX");
+	return ($domain ? isValidMXRecord($domain, "MX") : 0);
 }
 
 /**
@@ -1842,7 +1842,14 @@ function dolGetElementUrl($objectid, $objecttype, $withpicto = 0, $option = '')
 		$classname = 'CommandeFournisseur';
 		$classpath = 'fourn/class';
 		$module = 'fournisseur';
-	} elseif ($objecttype == 'stock') {
+	}
+	elseif ($objecttype == 'supplier_proposal') {
+		$classfile = 'supplier_proposal';
+		$classname = 'SupplierProposal';
+		$classpath = 'supplier_proposal/class';
+		$module = 'supplier_proposal';
+	}
+	elseif ($objecttype == 'stock') {
 		$classpath = 'product/stock/class';
 		$classfile = 'entrepot';
 		$classname = 'Entrepot';

@@ -158,8 +158,9 @@ $head = marges_prepare_head($user);
 $picto = 'margin';
 
 print '<form method="post" name="sel" action="'.$_SERVER['PHP_SELF'].'">';
+print '<input type="hidden" name="token" value="'.newToken().'">';
 
-dol_fiche_head($head, $langs->trans('checkMargins'), $title, 0, $picto);
+print dol_get_fiche_head($head, $langs->trans('checkMargins'), $title, 0, $picto);
 
 print '<table class="border centpercent">';
 

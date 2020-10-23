@@ -206,7 +206,7 @@ if ($action == 'create' || empty($action))
 	print '<input type="hidden" name="chid" value="'.$expensereport->id.'">';
 	print '<input type="hidden" name="action" value="add_payment">';
 
-    dol_fiche_head(null, '0', '', -1);
+    print dol_get_fiche_head(null, '0', '', -1);
 
     $linkback = '';
     // $linkback = '<a href="' . DOL_URL_ROOT . '/expensereport/payment/list.php">' . $langs->trans("BackToList") . '</a>';
@@ -241,14 +241,14 @@ if ($action == 'create' || empty($action))
 
     dol_fiche_end();
 
-    dol_fiche_head();
+    print dol_get_fiche_head();
 
     print '<table class="border centpercent">'."\n";
 
     print '<tr><td class="titlefield fieldrequired">'.$langs->trans("Date").'</td><td colspan="2">';
 	$datepaid = dol_mktime(12, 0, 0, GETPOST("remonth", 'int'), GETPOST("reday", 'int'), GETPOST("reyear", 'int'));
-	$datepayment = empty($conf->global->MAIN_AUTOFILL_DATE) ? (empty($_POST["remonth"]) ?-1 : $datepaid) : 0;
-	print $form->selectDate($datepayment, '', '', '', '', "add_payment", 1, 1);
+	$datepayment = ($datepaid == '' ? (empty($conf->global->MAIN_AUTOFILL_DATE) ?-1 : '') : $datepaid);
+	print $form->selectDate($datepayment, '', '', '', 0, "add_payment", 1, 1);
 	print "</td>";
 	print '</tr>';
 

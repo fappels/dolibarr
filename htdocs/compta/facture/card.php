@@ -414,16 +414,35 @@ if (empty($reshook))
 		$object->fetch($id);
 		$object->cond_reglement_code = 0; // To clean property
 		$object->cond_reglement_id = 0; // To clean property
-		$result = $object->setPaymentTerms(GETPOST('cond_reglement_id', 'int'));
-		if ($result < 0) dol_print_error($db, $object->error);
 
-		$old_date_lim_reglement = $object->date_lim_reglement;
-		$new_date_lim_reglement = $object->calculate_date_lim_reglement();
-		if ($new_date_lim_reglement > $old_date_lim_reglement) $object->date_lim_reglement = $new_date_lim_reglement;
-		if ($object->date_lim_reglement < $object->date) $object->date_lim_reglement = $object->date;
-		$result = $object->update($user);
-		if ($result < 0) {
-			dol_print_error($db, $object->error);
+		$error = 0;
+
+		$db->begin();
+
+		if (! $error) {
+			$result = $object->setPaymentTerms(GETPOST('cond_reglement_id', 'int'));
+			if ($result < 0) {
+			    $error++;
+				setEventMessages($object->error, $object->errors, 'errors');
+			}
+		}
+
+		if (! $error) {
+			$old_date_lim_reglement = $object->date_lim_reglement;
+			$new_date_lim_reglement = $object->calculate_date_lim_reglement();
+			if ($new_date_lim_reglement > $old_date_lim_reglement) $object->date_lim_reglement = $new_date_lim_reglement;
+			if ($object->date_lim_reglement < $object->date) $object->date_lim_reglement = $object->date;
+			$result = $object->update($user);
+			if ($result < 0) {
+			    $error++;
+				setEventMessages($object->error, $object->errors, 'errors');
+			}
+		}
+
+		if ($error) {
+			$db->rollback();
+		} else {
+			$db->commit();
 		}
 	} elseif ($action == 'setpaymentterm' && $usercancreate)
 	{
@@ -2879,7 +2898,7 @@ if ($action == 'create')
 	print '<input type="hidden" name="originentity" value="'.GETPOST('originentity').'">';
 	if (!empty($currency_tx)) print '<input type="hidden" name="originmulticurrency_tx" value="'.$currency_tx.'">';
 
-	dol_fiche_head('');
+	print dol_get_fiche_head('');
 
 	print '<table class="border centpercent">';
 
@@ -3382,7 +3401,7 @@ if ($action == 'create')
 				}
 			});
 
-			$("[name=\'type\']").trigger("change");
+			$("[name=\'type\']:checked").trigger("change");
 		});
 		</script>';
 	}
@@ -3687,7 +3706,7 @@ if ($action == 'create')
 
 	$head = facture_prepare_head($object);
 
-	dol_fiche_head($head, 'compta', $langs->trans('InvoiceCustomer'), -1, 'bill');
+	print dol_get_fiche_head($head, 'compta', $langs->trans('InvoiceCustomer'), -1, 'bill');
 
 	$formconfirm = '';
 

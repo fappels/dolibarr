@@ -317,7 +317,39 @@ if (empty($reshook))
 	// payments conditions
 	if ($action == 'setconditions' && $usercancreate)
 	{
-		$result = $object->setPaymentTerms(GETPOST('cond_reglement_id', 'int'));
+	    $object->fetch($id);
+	    $object->cond_reglement_code = 0; // To clean property
+	    $object->cond_reglement_id = 0; // To clean property
+
+	    $error = 0;
+
+	    $db->begin();
+
+	    if (! $error) {
+		    $result = $object->setPaymentTerms(GETPOST('cond_reglement_id', 'int'));
+		    if ($result < 0) {
+	    		$error++;
+	        	setEventMessages($object->error, $object->errors, 'errors');
+	    	}
+	    }
+
+	    if (! $error) {
+		    $old_date_echeance = $object->date_echeance;
+	    	$new_date_echeance = $object->calculate_date_lim_reglement();
+	    	if ($new_date_echeance > $old_date_echeance) $object->date_echeance = $new_date_echeance;
+	    	if ($object->date_echeance < $object->date) $object->date_echeance = $object->date;
+	    	$result = $object->update($user);
+	    	if ($result < 0) {
+	    		$error++;
+	    		setEventMessages($object->error, $object->errors, 'errors');
+	    	}
+	    }
+
+	    if ($error) {
+	    	$db->rollback();
+	    } else {
+	    	$db->commit();
+	    }
 	}
 
 	// Set incoterm
@@ -1746,7 +1778,7 @@ if ($action == 'create')
 	print '<input type="hidden" name="originid" value="'.$originid.'">';
 	if (!empty($currency_tx)) print '<input type="hidden" name="originmulticurrency_tx" value="'.$currency_tx.'">';
 
-	dol_fiche_head();
+	print dol_get_fiche_head();
 
 	print '<table class="border centpercent">';
 
@@ -2242,7 +2274,7 @@ if ($action == 'create')
 		$head = facturefourn_prepare_head($object);
 		$titre = $langs->trans('SupplierInvoice');
 
-		dol_fiche_head($head, 'card', $titre, -1, 'bill');
+		print dol_get_fiche_head($head, 'card', $titre, -1, 'bill');
 
 		$formconfirm = '';
 
