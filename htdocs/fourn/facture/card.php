@@ -250,6 +250,8 @@ if (empty($reshook)) {
 		// Remove a product line
 		$result = $object->deleteline($lineid);
 		if ($result > 0) {
+			// reorder lines
+			$object->line_order(true);
 			// Define output language
 			/*$outputlangs = $langs;
 			$newlang = '';
@@ -2412,7 +2414,10 @@ if ($action == 'create') {
 			$multicurrency_totalcreditnotes = $object->getSumCreditNotesUsed(1);
 			$multicurrency_totaldeposits = $object->getSumDepositsUsed(1);
 			$multicurrency_resteapayer = price2num($object->multicurrency_total_ttc - $multicurrency_totalpaye - $multicurrency_totalcreditnotes - $multicurrency_totaldeposits, 'MT');
-			$resteapayer = price2num($multicurrency_resteapayer / $object->multicurrency_tx, 'MT');
+			// Code to fix case of corrupted data
+			if ($resteapayer == 0 && $multicurrency_resteapayer != 0) {
+				$resteapayer = price2num($multicurrency_resteapayer / $object->multicurrency_tx, 'MT');
+			}
 		}
 
 		if ($object->paye) {
