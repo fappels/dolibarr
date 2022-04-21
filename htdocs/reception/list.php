@@ -445,6 +445,14 @@ if (empty($reshook)) {
 			setEventMessages($object->error, $errors, 'errors');
 			$error++;
 		}
+	} else {
+		// Mass actions
+		$objectclass = 'Reception';
+		$objectlabel = 'Receptions';
+		$permissiontoread = $user->rights->reception->lire;
+		$permissiontodelete = $user->rights->reception->supprimer;
+		$uploaddir = $conf->reception->dir_output;
+		include DOL_DOCUMENT_ROOT.'/core/actions_massactions.inc.php';
 	}
 }
 
