@@ -23,6 +23,7 @@ Thumbs.db
 dolibarr_install.log
 upgrade.log
 doxygen_warnings.log
+error_log
 # Vagrant generated files
 .vagrant
 # Composer installed repositories
