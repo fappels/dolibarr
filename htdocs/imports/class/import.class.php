@@ -181,7 +181,7 @@ class Import
 						// Array of columns allowed as UPDATE options
 						$this->array_import_updatekeys[$i] = (isset($module->import_updatekeys_array[$r]) ? $module->import_updatekeys_array[$r] : '');
 						// Array of examples
-						$this->array_import_examplevalues[$i] = (isset($module->import_examplevalues_array[$r]) ? $module->import_examplevalues_array[$r] : '');
+						$this->array_import_examplevalues[$i] = (isset($module->import_examplevalues_array[$r]) ? $module->import_examplevalues_array[$r] : array());
 						// Tableau des regles de conversion d'une valeur depuis une autre source (cle=champ, valeur=tableau des regles)
 						$this->array_import_convertvalue[$i] = (isset($module->import_convertvalue_array[$r]) ? $module->import_convertvalue_array[$r] : '');
 						// Sql request to run after import
