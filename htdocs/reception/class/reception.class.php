@@ -1165,7 +1165,7 @@ class Reception extends CommonObject
 				$sql_commfourndet .= ' FROM '.MAIN_DB_PREFIX.'commande_fournisseurdet';
 				$sql_commfourndet .= ' WHERE rowid = '.((int) $line->fk_commandefourndet);
 				$resql_commfourndet = $this->db->query($sql_commfourndet);
-				if (!empty($resql_commfourndet)) {
+				if (!empty($resql_commfourndet) && $this->db->num_rows($resql_commfourndet) > 0) {
 					$obj = $this->db->fetch_object($resql_commfourndet);
 					$line->qty_asked = $obj->qty;
 					$line->description = $obj->description;
