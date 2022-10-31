@@ -472,7 +472,7 @@ abstract class CommonDocGenerator
 			$array_key.'_multicurrency_total_tva_locale' => price($object->multicurrency_total_tva, 0, $outputlangs),
 			$array_key.'_multicurrency_total_ttc_locale' => price($object->multicurrency_total_ttc, 0, $outputlangs),
 
-			$array_key.'_note_private'=>$object->note,
+			$array_key.'_note_private'=>(!empty($object->note_private) ? $object->note_private : $object->note),
 			$array_key.'_note_public'=>$object->note_public,
 			$array_key.'_note'=>$object->note_public, // For backward compatibility
 
