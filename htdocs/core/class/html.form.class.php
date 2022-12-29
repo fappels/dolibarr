@@ -8333,7 +8333,7 @@ class Form
 						continue; // Do not show if module disabled
 					}
 				} elseif ($objecttype == 'mo') {
-					$tplpath = 'mrp/mo';
+					$tplpath = 'mrp';
 					if (empty($conf->mrp->enabled)) {
 						continue; // Do not show if module disabled
 					}
