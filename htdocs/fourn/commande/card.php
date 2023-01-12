@@ -2464,7 +2464,7 @@ if ($action == 'create') {
 
 			// Modify
 			if ($object->statut == CommandeFournisseur::STATUS_VALIDATED) {
-				if ($usercanorder) {
+				if ($usercanorder && !$hasstartedreception) {
 					print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=reopen&token='.newToken().'">'.$langs->trans("Modify").'</a>';
 				}
 			}
@@ -2533,7 +2533,7 @@ if ($action == 'create') {
 				}
 			}
 			if (in_array($object->statut, array(3, 4, 5, 6, 7, 9))) {
-				if ($usercanorder && !$hasstartedreception) {
+				if ($usercanorder) {
 					print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=reopen&token='.newToken().'">'.$langs->trans("ReOpen").'</a>';
 				}
 			}
