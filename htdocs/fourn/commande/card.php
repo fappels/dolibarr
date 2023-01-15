@@ -2426,14 +2426,18 @@ if ($action == 'create') {
 		if (empty($reshook)) {
 			$object->fetchObjectLinked(); // Links are used to show or not button, so we load them now.
 
-			// check if reception
+			// get reception status
 			$hasreception = 0;
+			$hasstartedreception = 0;
 			if ($conf->reception->enabled) {
+				$labelofbutton = $langs->trans("CreateReception");
 				if (!empty($object->linkedObjects['reception'])) {
 					foreach ($object->linkedObjects['reception'] as $element) {
 						if ($element->statut >= 0) {
 							$hasreception = 1;
-							break;
+						}
+						if ($element->statut >= 1) {
+							$hasstartedreception = 1;
 						}
 					}
 				}
@@ -2460,7 +2464,7 @@ if ($action == 'create') {
 
 			// Modify
 			if ($object->statut == CommandeFournisseur::STATUS_VALIDATED) {
-				if ($usercanorder) {
+				if ($usercanorder && !$hasstartedreception) {
 					print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=reopen&token='.newToken().'">'.$langs->trans("Modify").'</a>';
 				}
 			}
@@ -2512,23 +2516,19 @@ if ($action == 'create') {
 			}
 
 			// Reopen
-			if (in_array($object->statut, array(CommandeFournisseur::STATUS_ACCEPTED))) {
+			if (in_array($object->statut, array(CommandeFournisseur::STATUS_ACCEPTED)) && !$hasstartedreception) {
 				$buttonshown = 0;
-				if ($hasreception) {
-					print '<a class="butActionRefused classfortooltip" href="#" title="'.$langs->trans("ReceptionExist").'">'.$langs->trans("Disapprove").'</a>';
-				} else {
-					if (!$buttonshown && $usercanapprove) {
-						if (empty($conf->global->SUPPLIER_ORDER_REOPEN_BY_APPROVER_ONLY)
-							|| (!empty($conf->global->SUPPLIER_ORDER_REOPEN_BY_APPROVER_ONLY) && $user->id == $object->user_approve_id)) {
-							print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=reopen&token='.newToken().'">'.$langs->trans("Disapprove").'</a>';
-							$buttonshown++;
-						}
+				if (!$buttonshown && $usercanapprove) {
+					if (empty($conf->global->SUPPLIER_ORDER_REOPEN_BY_APPROVER_ONLY)
+						|| (!empty($conf->global->SUPPLIER_ORDER_REOPEN_BY_APPROVER_ONLY) && $user->id == $object->user_approve_id)) {
+						print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=reopen&token='.newToken().'">'.$langs->trans("Disapprove").'</a>';
+						$buttonshown++;
 					}
-					if (!$buttonshown && $usercanapprovesecond && !empty($conf->global->SUPPLIER_ORDER_3_STEPS_TO_BE_APPROVED)) {
-						if (empty($conf->global->SUPPLIER_ORDER_REOPEN_BY_APPROVER2_ONLY)
-							|| (!empty($conf->global->SUPPLIER_ORDER_REOPEN_BY_APPROVER2_ONLY) && $user->id == $object->user_approve_id2)) {
-							print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=reopen&token='.newToken().'">'.$langs->trans("Disapprove").'</a>';
-						}
+				}
+				if (!$buttonshown && $usercanapprovesecond && !empty($conf->global->SUPPLIER_ORDER_3_STEPS_TO_BE_APPROVED)) {
+					if (empty($conf->global->SUPPLIER_ORDER_REOPEN_BY_APPROVER2_ONLY)
+						|| (!empty($conf->global->SUPPLIER_ORDER_REOPEN_BY_APPROVER2_ONLY) && $user->id == $object->user_approve_id2)) {
+						print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=reopen&token='.newToken().'">'.$langs->trans("Disapprove").'</a>';
 					}
 				}
 			}
@@ -2540,11 +2540,7 @@ if ($action == 'create') {
 
 			// Ship
 			if (!empty($conf->stock->enabled) && (!empty($conf->global->STOCK_CALCULATE_ON_SUPPLIER_DISPATCH_ORDER) || !empty($conf->global->STOCK_CALCULATE_ON_RECEPTION) || !empty($conf->global->STOCK_CALCULATE_ON_RECEPTION_CLOSE))) {
-				if ($conf->reception->enabled) {
-					$labelofbutton = $langs->trans("CreateReception");
-				} else {
-					$labelofbutton = $langs->trans('ReceiveProducts');
-				}
+				$labelofbutton = $langs->trans('ReceiveProducts');
 
 				if (in_array($object->statut, array(3, 4, 5))) {
 					if (((!empty($conf->fournisseur->enabled) && empty($conf->global->MAIN_USE_NEW_SUPPLIERMOD)) || !empty($conf->supplier_order->enabled)) && $usercanreceive) {
