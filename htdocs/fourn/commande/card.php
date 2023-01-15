@@ -2426,23 +2426,6 @@ if ($action == 'create') {
 		if (empty($reshook)) {
 			$object->fetchObjectLinked(); // Links are used to show or not button, so we load them now.
 
-			// get reception status
-			$hasreception = 0;
-			$hasstartedreception = 0;
-			if ($conf->reception->enabled) {
-				$labelofbutton = $langs->trans("CreateReception");
-				if (!empty($object->linkedObjects['reception'])) {
-					foreach ($object->linkedObjects['reception'] as $element) {
-						if ($element->statut >= 0) {
-							$hasreception = 1;
-						}
-						if ($element->statut >= 1) {
-							$hasstartedreception = 1;
-						}
-					}
-				}
-			}
-
 			// Validate
 			if ($object->statut == 0 && $num > 0) {
 				if ($usercanvalidate) {
@@ -2516,7 +2499,7 @@ if ($action == 'create') {
 			}
 
 			// Reopen
-			if (in_array($object->statut, array(CommandeFournisseur::STATUS_ACCEPTED)) && !$hasstartedreception) {
+			if (in_array($object->statut, array(CommandeFournisseur::STATUS_ACCEPTED))) {
 				$buttonshown = 0;
 				if (!$buttonshown && $usercanapprove) {
 					if (empty($conf->global->SUPPLIER_ORDER_REOPEN_BY_APPROVER_ONLY)
@@ -2533,14 +2516,26 @@ if ($action == 'create') {
 				}
 			}
 			if (in_array($object->statut, array(3, 4, 5, 6, 7, 9))) {
-				if ($usercanorder && !$hasstartedreception) {
+				if ($usercanorder) {
 					print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=reopen&token='.newToken().'">'.$langs->trans("ReOpen").'</a>';
 				}
 			}
 
 			// Ship
+			$hasreception = 0;
 			if (!empty($conf->stock->enabled) && (!empty($conf->global->STOCK_CALCULATE_ON_SUPPLIER_DISPATCH_ORDER) || !empty($conf->global->STOCK_CALCULATE_ON_RECEPTION) || !empty($conf->global->STOCK_CALCULATE_ON_RECEPTION_CLOSE))) {
 				$labelofbutton = $langs->trans('ReceiveProducts');
+				if ($conf->reception->enabled) {
+					$labelofbutton = $langs->trans("CreateReception");
+					if (!empty($object->linkedObjects['reception'])) {
+						foreach ($object->linkedObjects['reception'] as $element) {
+							if ($element->statut >= 0) {
+								$hasreception = 1;
+								break;
+							}
+						}
+					}
+				}
 
 				if (in_array($object->statut, array(3, 4, 5))) {
 					if (((!empty($conf->fournisseur->enabled) && empty($conf->global->MAIN_USE_NEW_SUPPLIERMOD)) || !empty($conf->supplier_order->enabled)) && $usercanreceive) {
