@@ -183,16 +183,15 @@ class Entrepot extends CommonObject
 	/**
 	 *	Creation d'un entrepot en base
 	 *
-	 *	@param		User	$user       Object user that create the warehouse
+	 *	@param		User	$user		Object user that create the warehouse
+	 *	@param		bool	$notrigger	false=launch triggers after, true=disable triggers
 	 *	@return		int					>0 if OK, =<0 if KO
 	 */
-	public function create($user)
+	public function create($user, $notrigger = false)
 	{
 		global $conf;
 
 		$error = 0;
-
-		$this->label = trim(!empty($this->label) ? $this->label : $this->libelle);
 
 		// Error if label not defined
 		if ($this->label == '') {
@@ -223,12 +222,19 @@ class Entrepot extends CommonObject
 
 				// Actions on extra fields
 				if (!$error) {
-					if (!$error) {
-						$result = $this->insertExtraFields();
-						if ($result < 0) {
-							$error++;
-						}
+					$result = $this->insertExtraFields();
+					if ($result < 0) {
+						$error++;
 					}
+				}
+
+				if (!$error && !$notrigger) {
+					// Call triggers
+					$result = $this->call_trigger('WAREHOUSE_CREATE', $user);
+					if ($result < 0) {
+						$error++;
+					}
+					// End call triggers
 				}
 
 				if (!$error) {
@@ -255,11 +261,12 @@ class Entrepot extends CommonObject
 	/**
 	 *	Update properties of a warehouse
 	 *
-	 *	@param		int		$id     id of warehouse to modify
-	 *	@param      User	$user	User object
+	 *	@param		int		$id			id of warehouse to modify
+	 *	@param		User	$user		User object
+	 *	@param		bool 	$notrigger	false=launch triggers after, true=disable trigge
 	 *	@return		int				>0 if OK, <0 if KO
 	 */
-	public function update($id, $user)
+	public function update($id, $user, $notrigger = false)
 	{
 		global $conf;
 
@@ -267,9 +274,6 @@ class Entrepot extends CommonObject
 
 		if (empty($id)) {
 			$id = $this->id;
-		}
-		if (empty($this->label)) {
-			$this->label = $this->libelle; // For backward compatibility
 		}
 
 		// Check if new parent is already a child of current warehouse
@@ -281,8 +285,6 @@ class Entrepot extends CommonObject
 				return -2;
 			}
 		}
-
-		$this->label = trim(!empty($this->label) ? $this->label : $this->libelle);
 
 		$this->description = trim($this->description);
 
@@ -323,6 +325,15 @@ class Entrepot extends CommonObject
 			if ($result < 0) {
 				$error++;
 			}
+		}
+
+		if (!$error && !$notrigger) {
+			// Call triggers
+			$result = $this->call_trigger('WAREHOUSE_MODIFY', $user);
+			if ($result < 0) {
+				$error++;
+			}
+			// End call triggers
 		}
 
 		if (!$error) {
@@ -462,7 +473,6 @@ class Entrepot extends CommonObject
 				$this->fk_project     = $obj->fk_project;
 				$this->ref            = $obj->label;
 				$this->label          = $obj->label;
-				$this->libelle        = $obj->label; // deprecated
 				$this->description    = $obj->description;
 				$this->statut         = $obj->statut;
 				$this->lieu           = $obj->lieu;
@@ -521,12 +531,6 @@ class Entrepot extends CommonObject
 					$cuser = new User($this->db);
 					$cuser->fetch($obj->fk_user_author);
 					$this->user_creation = $cuser;
-				}
-
-				if ($obj->fk_user_valid) {
-					$vuser = new User($this->db);
-					$vuser->fetch($obj->fk_user_valid);
-					$this->user_validation = $vuser;
 				}
 
 				$this->date_creation     = $this->db->jdate($obj->datec);
@@ -717,7 +721,7 @@ class Entrepot extends CommonObject
 		if (isset($this->statut)) {
 			$label .= ' '.$this->getLibStatut(5);
 		}
-		$label .= '<br><b>'.$langs->trans('Ref').':</b> '.(empty($this->ref) ? (empty($this->label) ? $this->libelle : $this->label) : $this->ref);
+		$label .= '<br><b>'.$langs->trans('Ref').':</b> '.(empty($this->ref) ? $this->label : $this->ref);
 		if (!empty($this->lieu)) {
 			$label .= '<br><b>'.$langs->trans('LocationSummary').':</b> '.$this->lieu;
 		}
@@ -754,7 +758,7 @@ class Entrepot extends CommonObject
 			$result .= img_object(($notooltip ? '' : $label), ($this->picto ? $this->picto : 'generic'), ($notooltip ? (($withpicto != 2) ? 'class="paddingright"' : '') : 'class="'.(($withpicto != 2) ? 'paddingright ' : '').'classfortooltip"'), 0, 0, $notooltip ? 0 : 1);
 		}
 		if ($withpicto != 2) {
-			$result .= (($showfullpath || !empty($conf->global->STOCK_ALWAYS_SHOW_FULL_ARBO)) ? $this->get_full_arbo() : (empty($this->label) ? $this->libelle : $this->label));
+			$result .= (($showfullpath || !empty($conf->global->STOCK_ALWAYS_SHOW_FULL_ARBO)) ? $this->get_full_arbo() : $this->label);
 		}
 		$result .= $linkend;
 
@@ -810,7 +814,7 @@ class Entrepot extends CommonObject
 		// phpcs:enable
 		global $user, $langs, $conf;
 
-		$TArbo = array(empty($this->label) ? $this->libelle : $this->label);
+		$TArbo = array($this->label);
 
 		$protection = 100; // We limit depth of warehouses to 100
 

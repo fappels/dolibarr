@@ -508,6 +508,11 @@ abstract class CommonObject
 	public $alreadypaid;
 
 	/**
+	 * @var	int	Id of user create to show in info page
+	 */
+	public $user_creation;
+
+	/**
 	 * @var array	List of child tables. To test if we can delete object.
 	 */
 	protected $childtables = array();
