@@ -5407,7 +5407,7 @@ abstract class CommonObject
 			}
 
 			if ($result > 0) {
-				$ecmfile->label = md5_file(dol_osencode($destfull)); // hash of file content
+				$ecmfile->label = @md5_file(dol_osencode($destfull)); // hash of file content
 				$ecmfile->fullpath_orig = '';
 				$ecmfile->gen_or_uploaded = 'generated';
 				$ecmfile->description = ''; // indexed content
@@ -5421,7 +5421,7 @@ abstract class CommonObject
 				$ecmfile->entity = $conf->entity;
 				$ecmfile->filepath = $rel_dir;
 				$ecmfile->filename = $filename;
-				$ecmfile->label = md5_file(dol_osencode($destfull)); // hash of file content
+				$ecmfile->label = @md5_file(dol_osencode($destfull)); // hash of file content
 				$ecmfile->fullpath_orig = '';
 				$ecmfile->gen_or_uploaded = 'generated';
 				$ecmfile->description = ''; // indexed content
