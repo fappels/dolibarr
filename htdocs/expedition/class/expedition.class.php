@@ -570,6 +570,8 @@ class Expedition extends CommonObject
 				$this->ref_int		    = $obj->ref_int;
 				$this->statut               = $obj->fk_statut;
 				$this->user_author_id       = $obj->fk_user_author;
+				$this->fk_user_author       = $obj->fk_user_author;
+				$this->fk_user_valid        = $obj->fk_user_valid;
 				$this->date_creation        = $this->db->jdate($obj->date_creation);
 				$this->date_valid = $this->db->jdate($obj->date_valid);
 				$this->date                 = $this->db->jdate($obj->date_expedition); // TODO deprecated
@@ -1143,7 +1145,7 @@ class Expedition extends CommonObject
 		$sql .= " note_private=".(isset($this->note_private) ? "'".$this->db->escape($this->note_private)."'" : "null").",";
 		$sql .= " note_public=".(isset($this->note_public) ? "'".$this->db->escape($this->note_public)."'" : "null").",";
 		$sql .= " model_pdf=".(isset($this->model_pdf) ? "'".$this->db->escape($this->model_pdf)."'" : "null").",";
-		$sql .= " entity=".$conf->entity;
+		$sql .= " entity=".(isset($this->entity) ? $this->entity : $conf->entity).",";
 
 		$sql .= " WHERE rowid=".((int) $this->id);
 
