@@ -1145,7 +1145,7 @@ class Expedition extends CommonObject
 		$sql .= " note_private=".(isset($this->note_private) ? "'".$this->db->escape($this->note_private)."'" : "null").",";
 		$sql .= " note_public=".(isset($this->note_public) ? "'".$this->db->escape($this->note_public)."'" : "null").",";
 		$sql .= " model_pdf=".(isset($this->model_pdf) ? "'".$this->db->escape($this->model_pdf)."'" : "null").",";
-		$sql .= " entity=".(isset($this->entity) ? $this->entity : $conf->entity).",";
+		$sql .= " entity=".(isset($this->entity) ? $this->entity : $conf->entity);
 
 		$sql .= " WHERE rowid=".((int) $this->id);
 
