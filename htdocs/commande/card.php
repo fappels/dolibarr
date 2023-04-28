@@ -1236,6 +1236,8 @@ if (empty($reshook)) {
 
 					$object->generateDocument($model, $outputlangs, $hidedetails, $hidedesc, $hideref);
 				}
+			} else {
+				setEventMessages($object->error, $object->errors, 'errors');
 			}
 		}
 	} elseif ($action == 'confirm_shipped' && $confirm == 'yes' && $usercanclose) {
