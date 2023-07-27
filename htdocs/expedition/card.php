@@ -159,6 +159,9 @@ if (empty($reshook)) {
 	if ($action == 'reopen' && $user->rights->expedition->creer) {
 		$object->fetch($id);
 		$result = $object->reOpen();
+		if ($result < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
 	}
 
 	// Set incoterm
