@@ -409,6 +409,7 @@ if (empty($reshook)) {
 				}
 
 				$id = $objecttmp->id; // For builddoc action
+				$lastref = $objecttmp->ref; // generated ref
 				$object  =$objecttmp;
 
 				// Fac builddoc
@@ -986,7 +987,7 @@ while ($i < min($num, $limit)) {
 	// Type ent
 	if (!empty($arrayfields['typent.code']['checked'])) {
 		print '<td class="center">';
-		if (count($typenArray) == 0) {
+		if (empty($typenArray)) {
 			$typenArray = $formcompany->typent_array(1);
 		}
 		print $typenArray[$obj->typent_code];
