@@ -1560,6 +1560,12 @@ class Reception extends CommonObject
 
 		$error = 0;
 
+		// Protection
+		if ($this->statut == Reception::STATUS_CLOSED) {
+			dol_syslog(get_class($this)."::Already in closed status", LOG_WARNING);
+			return 0;
+		}
+
 		$this->db->begin();
 
 		$sql = 'UPDATE '.MAIN_DB_PREFIX.'reception SET fk_statut='.self::STATUS_CLOSED;
@@ -1709,7 +1715,10 @@ class Reception extends CommonObject
 
 		$this->db->begin();
 
-		$this->setClosed();
+		if ($this->statut == Reception::STATUS_VALIDATED) {
+			// do not close if already closed
+			$this->setClosed();
+		}
 
 		$sql = 'UPDATE '.MAIN_DB_PREFIX.'reception SET  billed=1';
 		$sql .= " WHERE rowid = ".((int) $this->id).' AND fk_statut > 0';
