@@ -80,7 +80,7 @@ print '--- start'."\n";
 if ($argv[1] == 'reception') {
 	$reception = new Reception($db);
 
-	$sql = "SELECT fk_origin FROM harisons.llx_stock_mouvement where label like '%classified closed'  AND DATEM > '2023-09-01' group by fk_origin having count(DISTINCT fk_user_author) > 1 ORDER BY fk_origin"; // Get list of all double closed reception
+	$sql = "SELECT fk_origin FROM llx_stock_mouvement where label like '%classified closed'  AND DATEM > '2023-09-01' group by fk_origin having count(DISTINCT fk_user_author) > 1 ORDER BY fk_origin"; // Get list of all double closed reception
 	$resql = $db->query($sql);
 	if ($resql) {
 		while ($obj = $db->fetch_object($resql)) {
