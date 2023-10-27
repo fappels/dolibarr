@@ -183,6 +183,34 @@ function isASecretKey($keyname)
 }
 
 /**
+ * Is Dolibarr module enabled
+ *
+ * @param 	string 	$module 	Module name to check
+ * @return 	boolean				True if module is enabled
+ */
+function isModEnabled($module)
+{
+	global $conf;
+
+	// Fix special cases
+	$arrayconv = array(
+		'project' => 'projet',
+		'contract' => 'contrat',
+		'bank' => 'banque'
+	);
+	if (empty($conf->global->MAIN_USE_NEW_SUPPLIERMOD)) {
+		$arrayconv['supplier_order'] = 'fournisseur';
+		$arrayconv['supplier_invoice'] = 'fournisseur';
+	}
+	if (!empty($arrayconv[$module])) {
+		$module = $arrayconv[$module];
+	}
+
+	return !empty($conf->modules[$module]);
+	//return !empty($conf->$module->enabled);
+}
+
+/**
  * Return information about user browser
  *
  * Returns array with the following format:
