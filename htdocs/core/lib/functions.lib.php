@@ -206,8 +206,7 @@ function isModEnabled($module)
 		$module = $arrayconv[$module];
 	}
 
-	return !empty($conf->modules[$module]);
-	//return !empty($conf->$module->enabled);
+	return !empty($conf->$module->enabled);
 }
 
 /**
