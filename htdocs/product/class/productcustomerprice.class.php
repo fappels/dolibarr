@@ -482,10 +482,10 @@ class Productcustomerprice extends CommonObject
 		// phpcs:enable
 		global $langs;
 
-		if (!empty($sortfield)) {
+		if (empty($sortfield)) {
 			$sortfield = "t.rowid";
 		}
-		if (!empty($sortorder)) {
+		if (empty($sortorder)) {
 			$sortorder = "DESC";
 		}
 
