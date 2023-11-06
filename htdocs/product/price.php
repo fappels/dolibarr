@@ -1489,6 +1489,7 @@ if ($action == 'edit_price' && $object->getRights()->creer) {
 
 		$parameters = array();
 		$reshook = $hookmanager->executeHooks('formObjectOptions', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
+		print $hookmanager->resPrint;
 
 		print '</table>';
 		print '</div>';
@@ -1974,6 +1975,10 @@ if (!empty($conf->global->PRODUIT_CUSTOMER_PRICES)) {
 		}
 		print '</td></tr>';
 
+		$parameters = array();
+		$reshook = $hookmanager->executeHooks('formObjectOptions', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
+		print $hookmanager->resPrint;
+
 		print '</table>';
 
 
@@ -2057,6 +2062,10 @@ if (!empty($conf->global->PRODUIT_CUSTOMER_PRICES)) {
 			print '<td class="left">'.$langs->trans("MinimumRecommendedPrice", price($maxpricesupplier, 0, '', 1, -1, -1, 'auto')).' '.img_warning().'</td>';
 		}
 		print '</tr>';
+
+		$parameters = array();
+		$reshook = $hookmanager->executeHooks('formObjectOptions', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
+		print $hookmanager->resPrint;
 
 		print '</table>';
 
