@@ -2063,8 +2063,8 @@ if (!empty($conf->global->PRODUIT_CUSTOMER_PRICES)) {
 		}
 		print '</tr>';
 
-		$parameters = array();
-		$reshook = $hookmanager->executeHooks('formObjectOptions', $parameters, $prodcustprice, $action); // Note that $action and $object may have been modified by hook
+		$parameters = array('product_customer_price'=>$prodcustprice);
+		$reshook = $hookmanager->executeHooks('formObjectOptions', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
 		print $hookmanager->resPrint;
 
 		print '</table>';
