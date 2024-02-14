@@ -2184,7 +2184,7 @@ div.vmenu, td.vmenu {
 
 	.menuhider { display: block !important; }
 	.dropdown-user-image { display: none; }
-	.user-header { height: auto !important; color: var(--colorbackbody); }
+	.user-header { height: auto !important; color: var(--colortextbackhmenu); }
 
 	#id-container {
 		width: 100%;
@@ -7969,6 +7969,9 @@ table.jPicker {
 		min-width: 200px;      /* must be width of menu + padding + padding of sidenav */
 		max-width: 200px;      /* must be width of menu + padding + padding of sidenav */
 		width: 200px;          /* must be width of menu + padding + padding of sidenav */
+	}
+	.loginbuttonexternal {
+		width: 260px;
 	}
 	.side-nav-vert .user-menu .dropdown-menu {
 		width: 234px !important;
