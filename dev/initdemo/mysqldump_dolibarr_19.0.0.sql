@@ -2999,7 +2999,7 @@ DROP TABLE IF EXISTS `llx_c_type_contact`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `llx_c_type_contact` (
-  `rowid` int(11) NOT NULL,
+  `rowid` int(11) NOT NULL AUTO_INCREMENT,
   `element` varchar(30) NOT NULL,
   `source` varchar(8) NOT NULL DEFAULT 'external',
   `code` varchar(32) NOT NULL,
