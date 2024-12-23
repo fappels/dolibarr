@@ -2451,9 +2451,6 @@ class Facture extends CommonInvoice
 		if (empty($this->type)) {
 			$this->type = self::TYPE_STANDARD;
 		}
-		if (isset($this->subtype)) {
-			$this->subtype = trim($this->subtype);
-		}
 		if (isset($this->ref)) {
 			$this->ref = trim($this->ref);
 		}
