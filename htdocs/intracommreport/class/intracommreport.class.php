@@ -142,14 +142,6 @@ class IntracommReport extends CommonObject
 	/**
 	 * @var string
 	 */
-	public $periods;
-	/**
-	 * @var string
-	 */
-	public $mode;
-	/**
-	 * @var string
-	 */
 	public $content_xml;
 	/**
 	 * @var 'deb'|'des'
@@ -163,8 +155,6 @@ class IntracommReport extends CommonObject
 	 * @var int
 	 */
 	public $tms;
-	// END MODULEBUILDER PROPERTIES
-
 
 	/**
 	 * @var string ref ???
@@ -172,9 +162,14 @@ class IntracommReport extends CommonObject
 	public $label;
 
 	/**
-	 * @var string
+	 * @var int
 	 */
-	public $period;
+	public $period_year;
+
+	/**
+	 * @var int
+	 */
+	public $period_month;
 
 	/**
 	 * @var string
@@ -202,6 +197,10 @@ class IntracommReport extends CommonObject
 	 */
 	const TYPE_DES = 1;
 
+	/**
+	  * @var string   Helper class to display report lines preview (lines model)
+	  */
+	public $class_element_line = 'IntracomreportDebLine';
 
 	/**
 	 * Constructor
@@ -273,10 +272,86 @@ class IntracommReport extends CommonObject
 	public function fetch($id, $ref = null, $noextrafields = 0, $nolines = 0)
 	{
 		$result = $this->fetchCommon($id, $ref, '', $noextrafields);
-		if ($result > 0 && !empty($this->table_element_line) && empty($nolines)) {
-			$this->fetchLines($noextrafields);
-		}
+		$this->period_year = sprintf("%04d", $this->period_year);
+		$this->period_month = sprintf("%02d", $this->period_month);
 		return $result;
+	}
+
+	/**
+	 * Load list of objects in memory from the database.
+	 * Using a fetchAll() with limit = 0 is a very bad practice. Instead try to forge yourself an optimized SQL request with
+	 * your own loop with start and stop pagination.
+	 *
+	 * @param  string      	$sortorder    	Sort Order
+	 * @param  string      	$sortfield    	Sort field
+	 * @param  int         	$limit        	Limit the number of lines returned
+	 * @param  int         	$offset       	Offset
+	 * @param  string		$filter       	Filter as an Universal Search string.
+	 * 										Example: '((client:=:1) OR ((client:>=:2) AND (client:<=:3))) AND (client:!=:8) AND (nom:like:'a%')'
+	 * @param  string      	$filtermode   	No more used
+	 * @return array|int                 	int <0 if KO, array of pages if OK
+	 */
+	public function fetchAll($sortorder = '', $sortfield = '', $limit = 1000, $offset = 0, string $filter = '', $filtermode = 'AND')
+	{
+		dol_syslog(__METHOD__, LOG_DEBUG);
+
+		$records = array();
+
+		$sql = "SELECT ";
+		$sql .= $this->getFieldList('t');
+		$sql .= " FROM ".$this->db->prefix().$this->table_element." as t";
+		if (isset($this->isextrafieldmanaged) && $this->isextrafieldmanaged == 1) {
+			$sql .= " LEFT JOIN ".$this->db->prefix().$this->table_element."_extrafields as te ON te.fk_object = t.rowid";
+		}
+		if (isset($this->ismultientitymanaged) && $this->ismultientitymanaged == 1) {
+			$sql .= " WHERE t.entity IN (".getEntity($this->element).")";
+		} else {
+			$sql .= " WHERE 1 = 1";
+		}
+
+		// Manage filter
+		$errormessage = '';
+		$sql .= forgeSQLFromUniversalSearchCriteria($filter, $errormessage);
+		if ($errormessage) {
+			$this->errors[] = $errormessage;
+			dol_syslog(__METHOD__.' '.implode(',', $this->errors), LOG_ERR);
+			return -1;
+		}
+
+		if (!empty($sortfield)) {
+			$sql .= $this->db->order($sortfield, $sortorder);
+		}
+		if (!empty($limit)) {
+			$sql .= $this->db->plimit($limit, $offset);
+		}
+
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			$num = $this->db->num_rows($resql);
+			$i = 0;
+			while ($i < ($limit ? min($limit, $num) : $num)) {
+				$obj = $this->db->fetch_object($resql);
+
+				$record = new self($this->db);
+				$record->setVarsFromFetchObj($obj);
+
+				if (!empty($record->isextrafieldmanaged)) {
+					$record->fetch_optionals();
+				}
+
+				$records[$record->id] = $record;
+
+				$i++;
+			}
+			$this->db->free($resql);
+
+			return $records;
+		} else {
+			$this->errors[] = 'Error '.$this->db->lasterror();
+			dol_syslog(__METHOD__.' '.implode(',', $this->errors), LOG_ERR);
+
+			return -1;
+		}
 	}
 
 	/**
@@ -302,6 +377,208 @@ class IntracommReport extends CommonObject
 	{
 		return $this->deleteCommon($user, $notrigger);
 		//return $this->deleteCommon($user, $notrigger, 1);
+	}
+
+	/**
+	 *	Validate object
+	 *
+	 *	@param		User	$user     		User making status change
+	 *  @param		int		$notrigger		1=Does not execute triggers, 0= execute triggers
+	 *	@return  	int						Return integer <=0 if OK, 0=Nothing done, >0 if KO
+	 */
+	public function validate($user, $notrigger = 0)
+	{
+		global $conf;
+
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
+
+		$error = 0;
+
+		// Protection
+		if ($this->status == self::STATUS_VALIDATED) {
+			dol_syslog(get_class($this)."::validate action abandoned: already validated", LOG_WARNING);
+			return 0;
+		}
+
+		$now = dol_now();
+
+		$this->db->begin();
+
+		// Define new ref
+		if (!$error && (preg_match('/^[\(]?PROV/i', $this->ref) || empty($this->ref))) { // empty should not happened, but when it occurs, the test save life
+			$num = $this->getNextNumRef();
+		} else {
+			$num = $this->ref;
+		}
+		$this->newref = $num;
+
+		if (!empty($num)) {
+			// Validate
+			$sql = "UPDATE ".MAIN_DB_PREFIX.$this->table_element;
+			$sql .= " SET ";
+			if (!empty($this->fields['ref'])) {
+				$sql .= " ref = '".$this->db->escape($num)."',";
+			}
+			$sql .= " status = ".self::STATUS_VALIDATED;
+			if (!empty($this->fields['date_validation'])) {
+				$sql .= ", date_validation = '".$this->db->idate($now)."'";
+			}
+			if (!empty($this->fields['fk_user_valid'])) {
+				$sql .= ", fk_user_valid = ".((int) $user->id);
+			}
+			$sql .= " WHERE rowid = ".((int) $this->id);
+
+			dol_syslog(get_class($this)."::validate()", LOG_DEBUG);
+			$resql = $this->db->query($sql);
+			if (!$resql) {
+				dol_print_error($this->db);
+				$this->error = $this->db->lasterror();
+				$error++;
+			}
+
+			if (!$error && !$notrigger) {
+				// Call trigger
+				$result = $this->call_trigger('MYOBJECT_VALIDATE', $user);
+				if ($result < 0) {
+					$error++;
+				}
+				// End call triggers
+			}
+		}
+
+		if (!$error) {
+			$this->oldref = $this->ref;
+
+			// Rename directory if dir was a temporary ref
+			if (preg_match('/^[\(]?PROV/i', $this->ref)) {
+				// Now we rename also files into index
+				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filename = CONCAT('".$this->db->escape($this->newref)."', SUBSTR(filename, ".(strlen($this->ref) + 1).")), filepath = 'intracommreport/".$this->db->escape($this->newref)."'";
+				$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%' AND filepath = 'intracommreport/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
+				$resql = $this->db->query($sql);
+				if (!$resql) {
+					$error++;
+					$this->error = $this->db->lasterror();
+				}
+				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filepath = 'intracommreport/".$this->db->escape($this->newref)."'";
+				$sql .= " WHERE filepath = 'intracommreport/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
+				$resql = $this->db->query($sql);
+				if (!$resql) {
+					$error++;
+					$this->error = $this->db->lasterror();
+				}
+
+				// We rename directory ($this->ref = old ref, $num = new ref) in order not to lose the attachments
+				$oldref = dol_sanitizeFileName($this->ref);
+				$newref = dol_sanitizeFileName($num);
+				$dirsource = $conf->intracommreport->dir_output.'/intracommreport/'.$oldref;
+				$dirdest = $conf->intracommreport->dir_output.'/intracommreport/'.$newref;
+				if (!$error && file_exists($dirsource)) {
+					dol_syslog(get_class($this)."::validate() rename dir ".$dirsource." into ".$dirdest);
+
+					if (@rename($dirsource, $dirdest)) {
+						dol_syslog("Rename ok");
+						// Rename docs starting with $oldref with $newref
+						$listoffiles = dol_dir_list($conf->intracommreport->dir_output.'/intracommreport/'.$newref, 'files', 1, '^'.preg_quote($oldref, '/'));
+						foreach ($listoffiles as $fileentry) {
+							$dirsource = $fileentry['name'];
+							$dirdest = preg_replace('/^'.preg_quote($oldref, '/').'/', $newref, $dirsource);
+							$dirsource = $fileentry['path'].'/'.$dirsource;
+							$dirdest = $fileentry['path'].'/'.$dirdest;
+							@rename($dirsource, $dirdest);
+						}
+					}
+				}
+			}
+		}
+
+		if (!$error) {
+			// set total amount
+			$this->setValueFrom('amount', $this->amount);
+			// generate xml
+			$dirdest = $conf->intracommreport->dir_output.'/intracommreport/'.$this->newref;
+			$filename = $dirdest.'/'.$this->exporttype.'_'.$this->newref.'.xml';
+			$this->numero_declaration = $this->newref;
+			if ($this->exporttype == 'deb') {
+				$content_xml = $this->getXML('O', $this->type_declaration, $this->period_year.'-'.$this->period_month);
+			} elseif ($this->exporttype == 'des') {
+				$content_xml = $this->getXMLDes($this->period_year, $this->period_month, $this->type_declaration);
+			}
+			if (is_string($content_xml)) {
+				if (!dol_is_dir($dirdest)) {
+					dol_mkdir($dirdest);
+				}
+				$file = fopen($filename, "w");
+				fwrite($file, $content_xml);
+				fclose($file);
+				dolChmod($filename);
+			} else {
+				$error++;
+			}
+		}
+
+		// Set new ref and current status
+		if (!$error) {
+			$this->ref = $num;
+			$this->status = self::STATUS_VALIDATED;
+		}
+
+		if (!$error) {
+			$this->db->commit();
+			return 1;
+		} else {
+			$this->db->rollback();
+			return -1;
+		}
+	}
+
+	/**
+	 * 	Create an array of lines
+	 *
+	 * 	@return array|int		array of lines if OK, <0 if KO
+	 */
+	public function getLinesArray()
+	{
+		$this->lines = array();
+
+		$this->amount = 0;
+
+		$sql = $this->getSQLFactLines($this->type_declaration, $this->period_year.'-'.$this->period_month, $this->exporttype);
+
+		$resql = $this->db->query($sql);
+
+		if ($resql && $this->db->num_rows($resql) > 0) {
+			$i = 1;
+
+			while ($res = $this->db->fetch_object($resql)) {
+				if ($this->exporttype == 'des') {
+					// TODO
+				} else {
+					$objectline = new IntracommreportDebLine($this->db);
+					$objectline->id = $i;
+					$objectline->fk_facture = $res->fk_facture;
+					$objectline->fk_product = $res->fk_product;
+					$objectline->customcode = $res->customcode;
+					$objectline->code = $res->code;
+					$objectline->product_code = $res->product_code;
+					$objectline->weight = round($res->weight * $res->qty);
+					$objectline->qty = $res->qty;
+					$objectline->amount = abs($res->total_ht);
+					$objectline->procedure_code = ($res->total_ht >= 0 ? '21' : '25');
+					$objectline->fk_soc = $res->id_client;
+					$objectline->tva_intra = $res->tva_intra;
+					$objectline->mode_transport = $res->mode_transport;
+					$objectline->region_code = substr($res->zip, 0, 2);
+
+					$this->lines[] = $objectline;
+
+					$this->amount += $objectline->amount;
+				}
+
+				$i++;
+			}
+		}
+
+		return $this->lines;
 	}
 
 	/**
@@ -346,7 +623,7 @@ class IntracommReport extends CommonObject
 		}
 		$declaration->addChild('PSIId', $psiId);
 		$function = $declaration->addChild('Function');
-		$functionCode = $function->addChild('functionCode', $mode);
+		$function->addChild('functionCode', $mode);
 		$declaration->addChild('declarationTypeCode', getDolGlobalString('INTRACOMMREPORT_NIV_OBLIGATION_'.strtoupper($type)));
 		$declaration->addChild('flowCode', ($type == 'introduction' ? 'A' : 'D'));
 		$declaration->addChild('currencyCode', $conf->global->MAIN_MONNAIE);
@@ -359,7 +636,9 @@ class IntracommReport extends CommonObject
 		$this->errors = array_unique($this->errors);
 
 		if (!empty($res)) {
-			return $e->asXML();
+			$dom = dom_import_simplexml($e)->ownerDocument;
+			$dom->formatOutput = true;
+			return $dom->saveXML();
 		} else {
 			return false;
 		}
@@ -465,7 +744,7 @@ class IntracommReport extends CommonObject
 	 *
 	 *  @param      string	$type				Declaration type by default - introduction or expedition (always 'expedition' for Des)
 	 *  @param      string	$period_reference	Reference declaration
-	 *  @param      'deb'|'des'	$exporttype	    	deb=DEB, des=DES
+	 *  @param      string	$exporttype	    	deb=DEB, des=DES
 	 *  @return     string       			  	Return integer <0 if KO, >0 if OK
 	 */
 	public function getSQLFactLines($type, $period_reference, $exporttype = 'deb')
@@ -473,13 +752,13 @@ class IntracommReport extends CommonObject
 		global $mysoc, $conf;
 
 		if ($type == 'expedition' || $exporttype == 'des') {
-			$sql = "SELECT f.ref as refinvoice, f.total_ht";
+			$sql = "SELECT f.ref as refinvoice, f.rowid as fk_facture, l.total_ht";
 			$table = 'facture';
 			$table_extraf = 'facture_extrafields';
 			$tabledet = 'facturedet';
 			$field_link = 'fk_facture';
 		} else { // Introduction
-			$sql = "SELECT f.ref_supplier as refinvoice, f.total_ht";
+			$sql = "SELECT f.ref_supplier as refinvoice, f.rowid as fk_facture, l.total_ht";
 			$table = 'facture_fourn';
 			$table_extraf = 'facture_fourn_extrafields';
 			$tabledet = 'facture_fourn_det';
@@ -491,7 +770,7 @@ class IntracommReport extends CommonObject
 		$sql .= ", l.fk_product, l.qty
 				, p.weight, p.rowid as id_prod, p.customcode
 				, s.rowid as id_client, s.nom, s.zip, s.fk_pays, s.tva_intra
-				, c.code
+				, c.code, cp.code as product_code
 				, ext.mode_transport
 				FROM ".MAIN_DB_PREFIX.$tabledet." l
 				INNER JOIN ".MAIN_DB_PREFIX.$table." f ON (f.rowid = l.".$this->db->escape($field_link).")
@@ -499,10 +778,13 @@ class IntracommReport extends CommonObject
 				INNER JOIN ".MAIN_DB_PREFIX."product p ON (p.rowid = l.fk_product)
 				INNER JOIN ".MAIN_DB_PREFIX."societe s ON (s.rowid = f.fk_soc)
 				LEFT JOIN ".MAIN_DB_PREFIX."c_country c ON (c.rowid = s.fk_pays)
+				LEFT JOIN ".MAIN_DB_PREFIX."c_country cp ON (cp.rowid = p.fk_country)
 				WHERE f.fk_statut > 0
 				AND l.product_type = ".($exporttype == "des" ? 1 : 0)."
 				AND f.entity = ".((int) $conf->entity)."
 				AND (s.fk_pays <> ".((int) $mysoc->country_id)." OR s.fk_pays IS NULL)
+				AND c.eec = 1
+				AND l.total_ht <> 0
 				AND f.datef BETWEEN '".$this->db->escape((string) $period_reference)."-01' AND '".$this->db->escape((string) $period_reference)."-".((int) $period_end_of_month_day)."'";
 
 		return $sql;
@@ -529,15 +811,15 @@ class IntracommReport extends CommonObject
 		}
 		$cn8->addChild('CN8Code', $code_douane);
 		$item->addChild('MSConsDestCode', $res->code); // code iso pays client
-		$item->addChild('countryOfOriginCode', substr($res->zip, 0, 2)); // code iso pays d'origine
+		$item->addChild('countryOfOriginCode', $res->product_code); // code iso pays d'origine produit
 		$item->addChild('netMass', (string) round($res->weight * $res->qty)); // Poids du produit
 		$item->addChild('quantityInSU', (string) $res->qty); // Quantité de produit dans la ligne
-		$item->addChild('invoicedAmount', (string) round($res->total_ht)); // Montant total ht de la facture (entier attendu)
+		$item->addChild('invoicedAmount', (string) abs(round($res->total_ht))); // Montant total ht de la facture (entier attendu)
 		// $item->addChild('invoicedNumber', $res->refinvoice); // Numéro facture
 		if (!empty($res->tva_intra)) {
 			$item->addChild('partnerId', $res->tva_intra);
 		}
-		$item->addChild('statisticalProcedureCode', '11');
+		$item->addChild('statisticalProcedureCode', ($res->total_ht >= 0 ? '21' : '25')); // TODO make this configurable
 		$nature_of_transaction = $item->addChild('NatureOfTransaction');
 		$nature_of_transaction->addChild('natureOfTransactionACode', '1');
 		$nature_of_transaction->addChild('natureOfTransactionBCode', '1');
@@ -877,7 +1159,7 @@ class IntracommReport extends CommonObject
 
 		if (empty($this->labelStatus) || empty($this->labelStatusShort)) {
 			global $langs;
-			//$langs->load("debweb@debweb");
+			//$langs->load("intracommreport");
 			$this->labelStatus[self::STATUS_DRAFT] = $langs->transnoentitiesnoconv('Draft');
 			$this->labelStatus[self::STATUS_VALIDATED] = $langs->transnoentitiesnoconv('Enabled');
 			$this->labelStatus[self::STATUS_CANCELED] = $langs->transnoentitiesnoconv('Disabled');
@@ -893,5 +1175,91 @@ class IntracommReport extends CommonObject
 		}
 
 		return dolGetStatus($this->labelStatus[$status], $this->labelStatusShort[$status], '', $statusType, $mode);
+	}
+}
+
+require_once DOL_DOCUMENT_ROOT.'/core/class/commonobjectline.class.php';
+
+/**
+ * Class IntracommreportLine. You can also remove this and generate a CRUD class for lines objects.
+ */
+class IntracommreportDebLine extends CommonObjectLine
+{
+	// TODO move to separate class and also make one for DES
+	// We should have a field rowid, fk_intracommreport and position
+	/**
+	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
+	 */
+	public $fields=array(
+		'id' => array('type'=>'integer', 'label'=>'ItemNumber', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1'),
+		'fk_facture' => array('type'=>'integer:Facture:compta/facture/class/facture.class.php', 'label'=>'Facture', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1', "css"=>"minwidth150"),
+		'fk_product' => array('type'=>'integer:Product:product/class/product.class.php', 'label'=>'Product', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'customcode' => array('type'=>'varchar(32)', 'label'=>'CN8Code', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'code' => array('type'=>'varchar(32)', 'label'=>'MSConsDestCode', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'product_code' => array('type'=>'varchar(32)', 'label'=>'countryOfOriginCode', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'weight' => array('type'=>'real', 'label'=>'netMass', 'enabled'=>'1', 'visible'=>1, 'isameasure'=>'1', 'noteditable'=>'1'),
+		'qty' => array('type'=>'real', 'label'=>'Quantity', 'enabled'=>'1', 'visible'=>1, 'isameasure'=>'1', 'noteditable'=>'1'),
+		'amount' => array('type'=>'price', "label"=>"Amount", "enabled"=>'1', 'visible'=>'1', 'isameasure'=>'1', 'noteditable'=>'1', "css"=>"minwidth100"),
+		'procedure_code' => array('type'=>'varchar(32)', 'label'=>'procedureCode', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'fk_soc' => array('type'=>'integer:Societe:societe/class/societe.class.php:1:(status:=:1)', 'label'=>'ThirdParty', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'tva_intra' => array('type'=>'varchar(64)', 'label'=>'partnerId', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		//'mode_transport' =>array('type'=>'sellist:c_intracommreport_mode_transport:label:code::1:', 'label'=>'ModeTransport', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1'),
+		'region_code' => array('type'=>'varchar(32)', 'label'=>'regionCode', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+	);
+
+	public $id;
+	public $fk_facture;
+	public $fk_product;
+	public $customcode;
+	public $code;
+	public $product_code;
+	public $weight;
+	public $qty;
+	public $amount;
+	public $procedure_code;
+	public $fk_soc;
+	public $tva_intra;
+	public $mode_transport;
+	public $region_code;
+
+	/**
+	 * To overload
+	 * @see CommonObjectLine
+	 */
+	public $parent_element = 'intracommreport';
+
+	/**
+	 * To overload
+	 * @see CommonObjectLine
+	 */
+	public $fk_parent_attribute = '';
+
+	/**
+	 * Constructor
+	 *
+	 * @param DoliDB $db Database handler
+	 */
+	public function __construct(DoliDB $db)
+	{
+		global $langs;
+		$this->db = $db;
+
+		// Unset fields that are disabled
+		foreach ($this->fields as $key => $val) {
+			if (isset($val['enabled']) && empty($val['enabled'])) {
+				unset($this->fields[$key]);
+			}
+		}
+
+		// Translate some data of arrayofkeyval
+		if (is_object($langs)) {
+			foreach ($this->fields as $key => $val) {
+				if (isset($val['arrayofkeyval']) && is_array($val['arrayofkeyval'])) {
+					foreach ($val['arrayofkeyval'] as $key2 => $val2) {
+						$this->fields[$key]['arrayofkeyval'][$key2]=$langs->trans($val2);
+					}
+				}
+			}
+		}
 	}
 }
