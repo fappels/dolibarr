@@ -111,8 +111,8 @@ class IntracommReport extends CommonObject
 		"label" => array("type"=>"varchar(255)", "label"=>"Label", "enabled"=>"1", 'position'=>30, 'notnull'=>0, "visible"=>"1", "alwayseditable"=>"1", "searchall"=>"1", "css"=>"minwidth300", "cssview"=>"wordbreak", "help"=>"Help text", "showoncombobox"=>"2", "validate"=>"1",),
 		"exporttype" => array("type"=>"varchar(64)", "label"=>"ExportType", "enabled"=>"1", 'position'=>32, 'notnull'=>1, "arrayofkeyval"=>array("deb" => "DEB", "des" => "DES"),"visible"=>"1",),
 		"type_declaration" => array("type"=>"varchar(64)", "label"=>"TypeOfDeclaration", "enabled"=>"1", 'position'=>34, 'notnull'=>1, "visible"=>"1", "arrayofkeyval"=>array("introduction" => "Introduction", "expedition" => "Expedition"), "default"=>"expedition",),
-		"period_month" => array("type"=>"varchar(64)", "label"=>"AnalysisPeriodMonth", "enabled"=>"1", 'position'=>36, 'notnull'=>0, "visible"=>"2",),
-		"period_year" => array("type"=>"varchar(64)", "label"=>"AnalysisPeriodYear", "enabled"=>"1", 'position'=>38, 'notnull'=>0, "visible"=>"2",),
+		"period_month" => array("type"=>"integer", "label"=>"AnalysisPeriodMonth", "enabled"=>"1", 'position'=>36, 'notnull'=>0, "visible"=>"2",),
+		"period_year" => array("type"=>"integer", "label"=>"AnalysisPeriodYear", "enabled"=>"1", 'position'=>38, 'notnull'=>0, "visible"=>"2",),
 		"amount" => array("type"=>"price", "label"=>"Amount", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"5", "default"=>"null", "isameasure"=>"1", "help"=>"TotalInvoiced", "validate"=>"1", 'noteditable'=>'1',),
 		"description" => array("type"=>"text", "label"=>"Description", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"3", "validate"=>"1",),
 		"note_public" => array("type"=>"html", "label"=>"NotePublic", "enabled"=>"1", 'position'=>61, 'notnull'=>0, "visible"=>"0", "cssview"=>"wordbreak", "validate"=>"1",),
@@ -272,8 +272,6 @@ class IntracommReport extends CommonObject
 	public function fetch($id, $ref = null, $noextrafields = 0, $nolines = 0)
 	{
 		$result = $this->fetchCommon($id, $ref, '', $noextrafields);
-		$this->period_year = sprintf("%04d", $this->period_year);
-		$this->period_month = sprintf("%02d", $this->period_month);
 		return $result;
 	}
 
@@ -499,7 +497,7 @@ class IntracommReport extends CommonObject
 			$filename = $dirdest.'/'.$this->exporttype.'_'.$this->newref.'.xml';
 			$this->numero_declaration = $this->newref;
 			if ($this->exporttype == 'deb') {
-				$content_xml = $this->getXML('O', $this->type_declaration, $this->period_year.'-'.$this->period_month);
+				$content_xml = $this->getXML('O', $this->type_declaration, sprintf("%04d", $this->period_year).'-'.sprintf("%02d", $this->period_month));
 			} elseif ($this->exporttype == 'des') {
 				$content_xml = $this->getXMLDes($this->period_year, $this->period_month, $this->type_declaration);
 			}
@@ -542,7 +540,7 @@ class IntracommReport extends CommonObject
 
 		$this->amount = 0;
 
-		$sql = $this->getSQLFactLines($this->type_declaration, $this->period_year.'-'.$this->period_month, $this->exporttype);
+		$sql = $this->getSQLFactLines($this->type_declaration, sprintf("%04d", $this->period_year).'-'.sprintf("%02d", $this->period_month), $this->exporttype);
 
 		$resql = $this->db->query($sql);
 
