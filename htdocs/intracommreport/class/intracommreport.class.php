@@ -146,7 +146,15 @@ class IntracommReport extends CommonObject
 	/**
 	 * @var 'deb'|'des'
 	 */
-	public $type_export;
+	public $exporttype;
+	/**
+	 * @var string
+	 */
+	public $description;
+	/**
+	 * @var float
+	 */
+	public $amount;
 	/**
 	 * @var int|string
 	 */
@@ -241,7 +249,7 @@ class IntracommReport extends CommonObject
 			}
 		}
 
-		$this->type_export = 'deb';
+		$this->exporttype = 'deb';
 	}
 
 	/**
@@ -530,17 +538,21 @@ class IntracommReport extends CommonObject
 	}
 
 	/**
-	 * 	Create an array of lines
+	 * 	Create an array of declaration items for preview and calculate declaration total amount
+	 *
+	 * 	@param		object	$objectline_model		declaration item model
 	 *
 	 * 	@return array|int		array of lines if OK, <0 if KO
 	 */
-	public function getLinesArray()
+	public function getLinesArray($objectline_model)
 	{
 		$this->lines = array();
 
 		$this->amount = 0;
 
-		$sql = $this->getSQLFactLines($this->type_declaration, sprintf("%04d", $this->period_year).'-'.sprintf("%02d", $this->period_month), $this->exporttype);
+		$intracommreport = new IntracommReport($this->db);
+
+		$sql = $intracommreport->getSQLFactLines($this->type_declaration, $this->period_year.'-'.sprintf("%02d", $this->period_month), $this->exporttype);
 
 		$resql = $this->db->query($sql);
 
@@ -548,10 +560,15 @@ class IntracommReport extends CommonObject
 			$i = 1;
 
 			while ($res = $this->db->fetch_object($resql)) {
+				$objectline = clone $objectline_model;
 				if ($this->exporttype == 'des') {
-					// TODO
+					$objectline->id = $i;
+					$objectline->fk_facture = $res->fk_facture;
+					$objectline->fk_product = $res->fk_product;
+					$objectline->amount = abs($res->total_ht);
+					$objectline->fk_soc = $res->id_client;
+					$objectline->tva_intra = $res->tva_intra;
 				} else {
-					$objectline = new IntracommreportDebLine($this->db);
 					$objectline->id = $i;
 					$objectline->fk_facture = $res->fk_facture;
 					$objectline->fk_product = $res->fk_product;
@@ -566,11 +583,11 @@ class IntracommReport extends CommonObject
 					$objectline->tva_intra = $res->tva_intra;
 					$objectline->mode_transport = $res->mode_transport;
 					$objectline->region_code = substr($res->zip, 0, 2);
-
-					$this->lines[] = $objectline;
-
-					$this->amount += $objectline->amount;
 				}
+
+				$this->lines[] = $objectline;
+
+				$this->amount += $objectline->amount;
 
 				$i++;
 			}
@@ -908,7 +925,7 @@ class IntracommReport extends CommonObject
 	{
 		$sql = "SELECT MAX(numero_declaration) as max_declaration_number";
 		$sql .= " FROM ".MAIN_DB_PREFIX.$this->table_element;
-		$sql .= " WHERE exporttype = '".$this->db->escape($this->type_export)."'";
+		$sql .= " WHERE exporttype = '".$this->db->escape($this->exporttype)."'";
 		$resql = $this->db->query($sql);
 		$res = null;
 		if ($resql) {
@@ -1179,12 +1196,10 @@ class IntracommReport extends CommonObject
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobjectline.class.php';
 
 /**
- * Class IntracommreportLine. You can also remove this and generate a CRUD class for lines objects.
+ * Class IntracommreportDebExpeditionLine. Model of a deb expedition item.
  */
-class IntracommreportDebLine extends CommonObjectLine
+class IntracommreportDebExpeditionLine extends CommonObjectLine
 {
-	// TODO move to separate class and also make one for DES
-	// We should have a field rowid, fk_intracommreport and position
 	/**
 	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
 	 */
@@ -1219,6 +1234,220 @@ class IntracommreportDebLine extends CommonObjectLine
 	public $tva_intra;
 	public $mode_transport;
 	public $region_code;
+
+	/**
+	 * To overload
+	 * @see CommonObjectLine
+	 */
+	public $parent_element = 'intracommreport';
+
+	/**
+	 * To overload
+	 * @see CommonObjectLine
+	 */
+	public $fk_parent_attribute = '';
+
+	/**
+	 * Constructor
+	 *
+	 * @param DoliDB $db Database handler
+	 */
+	public function __construct(DoliDB $db)
+	{
+		global $langs;
+		$this->db = $db;
+
+		// Unset fields that are disabled
+		foreach ($this->fields as $key => $val) {
+			if (isset($val['enabled']) && empty($val['enabled'])) {
+				unset($this->fields[$key]);
+			}
+		}
+
+		// Translate some data of arrayofkeyval
+		if (is_object($langs)) {
+			foreach ($this->fields as $key => $val) {
+				if (isset($val['arrayofkeyval']) && is_array($val['arrayofkeyval'])) {
+					foreach ($val['arrayofkeyval'] as $key2 => $val2) {
+						$this->fields[$key]['arrayofkeyval'][$key2]=$langs->trans($val2);
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Class IntracommreportDebIntroductionLine. Model of a deb Introduction item.
+ */
+class IntracommreportDebIntroductionLine extends CommonObjectLine
+{
+	/**
+	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
+	 */
+	public $fields=array(
+		'id' => array('type'=>'integer', 'label'=>'ItemNumber', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1'),
+		'fk_facture' => array('type'=>'integer:FactureFournisseur:fourn/class/fournisseur.facture.class.php', 'label'=>'Facture', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1', "css"=>"minwidth150"),
+		'fk_product' => array('type'=>'integer:Product:product/class/product.class.php', 'label'=>'Product', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'customcode' => array('type'=>'varchar(32)', 'label'=>'CN8Code', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'code' => array('type'=>'varchar(32)', 'label'=>'MSConsDestCode', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'product_code' => array('type'=>'varchar(32)', 'label'=>'countryOfOriginCode', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'weight' => array('type'=>'real', 'label'=>'netMass', 'enabled'=>'1', 'visible'=>1, 'isameasure'=>'1', 'noteditable'=>'1'),
+		'qty' => array('type'=>'real', 'label'=>'Quantity', 'enabled'=>'1', 'visible'=>1, 'isameasure'=>'1', 'noteditable'=>'1'),
+		'amount' => array('type'=>'price', "label"=>"Amount", "enabled"=>'1', 'visible'=>'1', 'isameasure'=>'1', 'noteditable'=>'1', "css"=>"minwidth100"),
+		'procedure_code' => array('type'=>'varchar(32)', 'label'=>'procedureCode', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'fk_soc' => array('type'=>'integer:Societe:societe/class/societe.class.php:1:(status:=:1)', 'label'=>'ThirdParty', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'tva_intra' => array('type'=>'varchar(64)', 'label'=>'partnerId', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'mode_transport' =>array('type'=>'varchar(64)', 'label'=>'ModeTransport', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1'),
+		'region_code' => array('type'=>'varchar(32)', 'label'=>'regionCode', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+	);
+
+	public $id;
+	public $fk_facture;
+	public $fk_product;
+	public $customcode;
+	public $code;
+	public $product_code;
+	public $weight;
+	public $qty;
+	public $amount;
+	public $procedure_code;
+	public $fk_soc;
+	public $tva_intra;
+	public $mode_transport;
+	public $region_code;
+
+	/**
+	 * To overload
+	 * @see CommonObjectLine
+	 */
+	public $parent_element = 'intracommreport';
+
+	/**
+	 * To overload
+	 * @see CommonObjectLine
+	 */
+	public $fk_parent_attribute = '';
+
+	/**
+	 * Constructor
+	 *
+	 * @param DoliDB $db Database handler
+	 */
+	public function __construct(DoliDB $db)
+	{
+		global $langs;
+		$this->db = $db;
+
+		// Unset fields that are disabled
+		foreach ($this->fields as $key => $val) {
+			if (isset($val['enabled']) && empty($val['enabled'])) {
+				unset($this->fields[$key]);
+			}
+		}
+
+		// Translate some data of arrayofkeyval
+		if (is_object($langs)) {
+			foreach ($this->fields as $key => $val) {
+				if (isset($val['arrayofkeyval']) && is_array($val['arrayofkeyval'])) {
+					foreach ($val['arrayofkeyval'] as $key2 => $val2) {
+						$this->fields[$key]['arrayofkeyval'][$key2]=$langs->trans($val2);
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Class IntracommreportDesExpeditionLine. Model of a des expedition item.
+ */
+class IntracommreportDesExpeditionLine extends CommonObjectLine
+{
+	/**
+	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
+	 */
+	public $fields=array(
+		'id' => array('type'=>'integer', 'label'=>'ItemNumber', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1'),
+		'fk_facture' => array('type'=>'integer:Facture:compta/facture/class/facture.class.php', 'label'=>'Facture', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1', "css"=>"minwidth150"),
+		'fk_product' => array('type'=>'integer:Product:product/class/product.class.php', 'label'=>'Product', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'amount' => array('type'=>'price', "label"=>"Amount", "enabled"=>'1', 'visible'=>'1', 'isameasure'=>'1', 'noteditable'=>'1', "css"=>"minwidth100"),
+		'fk_soc' => array('type'=>'integer:Societe:societe/class/societe.class.php:1:(status:=:1)', 'label'=>'ThirdParty', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'tva_intra' => array('type'=>'varchar(64)', 'label'=>'partnerId', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+	);
+
+	public $id;
+	public $fk_facture;
+	public $fk_product;
+	public $amount;
+	public $fk_soc;
+	public $tva_intra;
+
+	/**
+	 * To overload
+	 * @see CommonObjectLine
+	 */
+	public $parent_element = 'intracommreport';
+
+	/**
+	 * To overload
+	 * @see CommonObjectLine
+	 */
+	public $fk_parent_attribute = '';
+
+	/**
+	 * Constructor
+	 *
+	 * @param DoliDB $db Database handler
+	 */
+	public function __construct(DoliDB $db)
+	{
+		global $langs;
+		$this->db = $db;
+
+		// Unset fields that are disabled
+		foreach ($this->fields as $key => $val) {
+			if (isset($val['enabled']) && empty($val['enabled'])) {
+				unset($this->fields[$key]);
+			}
+		}
+
+		// Translate some data of arrayofkeyval
+		if (is_object($langs)) {
+			foreach ($this->fields as $key => $val) {
+				if (isset($val['arrayofkeyval']) && is_array($val['arrayofkeyval'])) {
+					foreach ($val['arrayofkeyval'] as $key2 => $val2) {
+						$this->fields[$key]['arrayofkeyval'][$key2]=$langs->trans($val2);
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
+* Class IntracommreportDesIntroductionLine. Model of a des Introduction item.
+*/
+class IntracommreportDesIntroductionLine extends CommonObjectLine
+{
+	/**
+	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
+	 */
+	public $fields=array(
+		'id' => array('type'=>'integer', 'label'=>'ItemNumber', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1'),
+		'fk_facture' => array('type'=>'integer:FactureFournisseur:fourn/class/fournisseur.facture.class.php', 'label'=>'Facture', 'enabled'=>1, 'visible'=>1, 'noteditable'=>'1', "css"=>"minwidth150"),
+		'fk_product' => array('type'=>'integer:Product:product/class/product.class.php', 'label'=>'Product', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'amount' => array('type'=>'price', "label"=>"Amount", "enabled"=>'1', 'visible'=>'1', 'isameasure'=>'1', 'noteditable'=>'1', "css"=>"minwidth100"),
+		'fk_soc' => array('type'=>'integer:Societe:societe/class/societe.class.php:1:(status:=:1)', 'label'=>'ThirdParty', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+		'tva_intra' => array('type'=>'varchar(64)', 'label'=>'partnerId', 'enabled'=>'1', 'visible'=>1, 'noteditable'=>'1'),
+	);
+
+	public $id;
+	public $fk_facture;
+	public $fk_product;
+	public $amount;
+	public $fk_soc;
+	public $tva_intra;
 
 	/**
 	 * To overload

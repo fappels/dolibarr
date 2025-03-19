@@ -35,7 +35,7 @@ if (empty($object) || !is_object($object)) {
 }
 
 
-global $forceall, $senderissupplier, $inputalsopricewithtax, $outputalsopricetotalwithtax, $permissiontoadd;
+global $forceall, $senderissupplier, $inputalsopricewithtax, $outputalsopricetotalwithtax, $permissiontoadd, $objectline;
 
 if (empty($dateSelector)) $dateSelector = 0;
 if (empty($forceall)) $forceall = 0;
@@ -47,8 +47,6 @@ if (empty($outputalsopricetotalwithtax)) $outputalsopricetotalwithtax = 0;
 $domData  = ' data-element="'.$line->element.'"';
 $domData .= ' data-id="'.$line->id.'"';
 
-
-$objectline = new IntracommreportLine($object->db);
 
 $coldisplay = 0;
 print "<!-- BEGIN PHP TEMPLATE objectline_view.tpl.php -->\n";
