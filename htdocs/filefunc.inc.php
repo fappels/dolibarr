@@ -31,7 +31,7 @@
  */
 
 if (!defined('DOL_APPLICATION_TITLE')) {
-	define('DOL_APPLICATION_TITLE', 'Dolibarr');
+	define('DOL_APPLICATION_TITLE', 'Dolibarr LTS');
 }
 if (!defined('DOL_VERSION')) {
 	define('DOL_VERSION', '19.0.4'); // a.b.c-alpha, a.b.c-beta, a.b.c-rcX or a.b.c
