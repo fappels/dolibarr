@@ -793,10 +793,10 @@ class AccountingAccount extends CommonObject
 					$code_l = getDolGlobalString('ACCOUNTING_PRODUCT_' . $const_name . '_ACCOUNT');
 					$suggestedaccountingaccountbydefaultfor = '';
 				} else {
-					if ($isSellerInEEC && $isBuyerInEEC && $factureDet->tva_tx != 0) {    // European intravat sale, but with a VAT
+					if ($isSellerInEEC && $isBuyerInEEC && $factureDet->tva_tx != 0 && !getDolGlobalString('SERVICE_ARE_ECOMMERCE_200238EC')) {    // European intravat sale, but with a VAT
 						$code_l = getDolGlobalString('ACCOUNTING_PRODUCT_' . $const_name . '_ACCOUNT');
 						$suggestedaccountingaccountbydefaultfor = 'eecwithvat';
-					} elseif ($isSellerInEEC && $isBuyerInEEC && empty($buyer->tva_intra)) {    // European intravat sale, without VAT intra community number
+					} elseif ($isSellerInEEC && $isBuyerInEEC && empty($buyer->tva_intra) && !getDolGlobalString('SERVICE_ARE_ECOMMERCE_200238EC')) {    // European intravat sale, without VAT intra community number
 						$code_l = getDolGlobalString('ACCOUNTING_PRODUCT_' . $const_name . '_ACCOUNT');
 						$suggestedaccountingaccountbydefaultfor = 'eecwithoutvatnumber';
 					} elseif ($isSellerInEEC && $isBuyerInEEC) {    // European intravat sale
@@ -824,7 +824,7 @@ class AccountingAccount extends CommonObject
 				$suggestedid = $accountingAccount['dom'];
 				$suggestedaccountingaccountfor = 'prodserv';
 			} else {
-				if ($isSellerInEEC && $isBuyerInEEC && $factureDet->tva_tx != 0) {
+				if ($isSellerInEEC && $isBuyerInEEC && $factureDet->tva_tx != 0 && !getDolGlobalString('SERVICE_ARE_ECOMMERCE_200238EC')) {
 					// European intravat sale, but with VAT
 					if ($type == 'customer' && !empty($product->accountancy_code_sell)) {
 						$code_p = $product->accountancy_code_sell;
@@ -833,7 +833,7 @@ class AccountingAccount extends CommonObject
 					}
 					$suggestedid = $accountingAccount['dom'];
 					$suggestedaccountingaccountfor = 'eecwithvat';
-				} elseif ($isSellerInEEC && $isBuyerInEEC && empty($buyer->tva_intra)) {
+				} elseif ($isSellerInEEC && $isBuyerInEEC && empty($buyer->tva_intra) && !getDolGlobalString('SERVICE_ARE_ECOMMERCE_200238EC')) {
 					// European intravat sale, without VAT intra community number
 					if ($type == 'customer' && !empty($product->accountancy_code_sell)) {
 						$code_p = $product->accountancy_code_sell;
