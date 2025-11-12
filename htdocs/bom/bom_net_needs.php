@@ -1,6 +1,7 @@
 <?php
 /* Copyright (C) 2017-2020  Laurent Destailleur     <eldy@users.sourceforge.net>
  * Copyright (C) 2019-2024  Frédéric France         <frederic.france@free.fr>
+ * Copyright (C) 2025		MDW						<mdeweerd@users.noreply.github.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -135,7 +136,7 @@ $form = new Form($db);
 $formfile = new FormFile($db);
 
 $title = $langs->trans('BOM');
-$help_url ='EN:Module_BOM';
+$help_url = 'EN:Module_BOM';
 
 llxHeader('', $title, $help_url, '', 0, 0, '', '', '', 'mod-bom page-net_needs');
 
@@ -257,39 +258,44 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 
 	print '</thead>';
 	print '<tbody>';
+	$tablerows = array();
+	$position = 0;
 	if (count($TChildBom) > 0) {
 		if ($action == 'treeview') {
 			foreach ($TChildBom as $fk_bom => $TProduct) {
 				$repeatChar = '&emsp;';
 				if (!empty($TProduct['bom'])) {
+					if (!empty($TProduct['position'])) {
+						$position = $TProduct['position'];
+					}
+					if (!empty($TProduct['level'])) {
+						$position = sprintf('%d.%d', $position, $TProduct['level']);
+					}
 					$prod = new Product($db);
 					$prod->fetch($TProduct['bom']->fk_product);
 					if ($TProduct['parentid'] != $object->id) {
-						print '<tr class="sub_bom_lines oddeven" parentid="'.$TProduct['parentid'].'">';
+						$tablerows[$position] = '<tr class="sub_bom_lines oddeven" parentid="'.$TProduct['parentid'].'">';
 					} else {
-						print '<tr class="oddeven">';
+						$tablerows[$position] = '<tr class="oddeven">';
 					}
-					if ($action == 'treeview') {
-						print '<td class="linecoldescription">'.str_repeat($repeatChar, $TProduct['level']).$prod->getNomUrl(1);
-					} else {
-						print '<td class="linecoldescription">'.str_repeat($repeatChar, $TProduct['level']).$TProduct['bom']->getNomUrl(1);
-					}
-					print ' <a class="collapse_bom" id="collapse-'.$fk_bom.'" href="#">';
-					print img_picto('', 'folder-open');
-					print '</a>';
-					print  '</td>';
-					if ($action == 'treeview') {
-						print '<td class="left">'.$TProduct['bom']->getNomUrl(1).'</td>';
-					}
-					print '<td class="linecolqty right">'.$TProduct['qty'].'</td>';
-					print '<td>';
-					print '</td>';
-					print '<td class="linecolstock right"></td>';
-					print '<td class="linecoltheoricalstock right"></td>';
-					print '</tr>';
+					$tablerows[$position] .= '<td class="linecoldescription">'.str_repeat($repeatChar, $TProduct['level']).$prod->getNomUrl(1);
+					$tablerows[$position] .= ' <a class="collapse_bom" id="collapse-'.$fk_bom.'" href="#">';
+					$tablerows[$position] .= img_picto('', 'folder-open');
+					$tablerows[$position] .= '</a>';
+					$tablerows[$position] .=  '</td>';
+					$tablerows[$position] .= '<td class="left">'.$TProduct['bom']->getNomUrl(1).'</td>';
+					$tablerows[$position] .= '<td class="linecolqty right">'.$TProduct['qty'].'</td>';
+					$tablerows[$position] .= '<td>';
+					$tablerows[$position] .= '</td>';
+					$tablerows[$position] .= '<td class="linecolstock right"></td>';
+					$tablerows[$position] .= '<td class="linecoltheoricalstock right"></td>';
+					$tablerows[$position] .= '</tr>';
 				}
 				if (!empty($TProduct['product'])) {
 					foreach ($TProduct['product'] as $fk_product => $TInfos) {
+						if (!empty($TInfos['position']) && $fk_bom == $object->id) { // no new position for sub bom lines
+							$position = $TInfos['position'];
+						}
 						$prod = new Product($db);
 						$prod->fetch($fk_product);
 						$prod->load_virtual_stock();
@@ -297,22 +303,28 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 							$prod->stock_reel = 0;
 						}
 						if ($fk_bom != $object->id) {
-							print '<tr class="sub_bom_lines oddeven" parentid="'.$fk_bom.'">';
+							$tablerows[$position] .= '<tr class="sub_bom_lines oddeven" parentid="'.$fk_bom.'">'; // sub bom on same position
 						} else {
-							print '<tr class="oddeven">';
+							$tablerows[$position] = '<tr class="oddeven">';
 						}
-						print '<td class="linecoldescription">'.str_repeat($repeatChar, $TInfos['level']).$prod->getNomUrl(1).'</td>';
+						$tablerows[$position] .= '<td class="linecoldescription">'.str_repeat($repeatChar, $TInfos['level']).$prod->getNomUrl(1).'</td>';
 						if ($action == 'treeview') {
-							print '<td></td>';
+							$tablerows[$position] .= '<td></td>';
 						}
-						print '<td class="linecolqty right">'.$TInfos['qty'].'</td>';
-						print '<td>';
-						print '</td>';
-						print '<td class="linecolstock right">'.price2num($prod->stock_reel, 'MS').'</td>';
-						print '<td class="linecoltheoricalstock right">'.$prod->stock_theorique.'</td>';
-						print '</tr>';
+						$tablerows[$position] .= '<td class="linecolqty right">'.$TInfos['qty'].'</td>';
+						$tablerows[$position] .= '<td>';
+						$tablerows[$position] .= '</td>';
+						$tablerows[$position] .= '<td class="linecolstock right">'.price2num($prod->stock_reel, 'MS').'</td>';
+						$tablerows[$position] .= '<td class="linecoltheoricalstock right">'.$prod->stock_theorique.'</td>';
+						$tablerows[$position] .= '</tr>';
 					}
 				}
+			}
+			// Sort the rows by position
+			ksort($tablerows, SORT_NUMERIC);
+			// Print the rows
+			foreach ($tablerows as $position => $row) {
+				print $row;
 			}
 		} else {
 			foreach ($TChildBom as $fk_product => $elem) {
@@ -330,7 +342,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 				if ($useunit) {
 					require_once DOL_DOCUMENT_ROOT.'/core/class/cunits.class.php';
 					$unit = new CUnits($db);
-					$unit->fetch($elem['fk_unit']);
+					$unit->fetch((int) $elem['fk_unit']);
 					print(isset($unit->label) ? "&nbsp;".$langs->trans(ucwords($unit->label))."&nbsp;" : '');
 				}
 				print '</td>';
