@@ -262,22 +262,18 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 	$position = '';
 	$levelposition = '';
 	$lineposition = 0;
-	$bomlevel = 0;
 	if (count($TChildBom) > 0) {
 		if ($action == 'treeview') {
 			foreach ($TChildBom as $fk_bom => $TProduct) {
 				$repeatChar = '&emsp;';
 				if (!empty($TProduct['bom'])) {
 					// we make position string in format 'lineposition.bomlevel.childposition'
-					if (!empty($TProduct['position']) && !empty($TProduct['parentid']) && $TProduct['parentid'] == $object->id) {
+					if (!empty($TProduct['position']) && $TProduct['parentid'] == $object->id) {
 						// define lineposition
 						$lineposition = $TProduct['position'];
 					}
-					if (isset($TProduct['level'])) {
-						$bomlevel = $TProduct['level'];
-					}
 					// define lineposition.bomlevel
-					$position = sprintf('%d.%d', $lineposition, $bomlevel);
+					$position = sprintf('%d.%d', $lineposition, $TProduct['level']);
 					// memorize level position for products in bom
 					$levelposition = $position;
 					if (!empty($TProduct['parentid']) && $TProduct['parentid'] != $object->id && empty($TProduct['product'])) {
@@ -320,11 +316,11 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 							$prod->stock_reel = 0;
 						}
 						if ($fk_bom != $object->id) {
-							$tablerows[$position] .= '<tr class="sub_bom_lines oddeven" parentid="'.$fk_bom.'">'; // sub bom on same position
+							$tablerows[$position] = '<tr class="sub_bom_lines oddeven" parentid="'.$fk_bom.'">'; // sub bom on same position
 						} else {
 							$tablerows[$position] = '<tr class="oddeven">';
 						}
-						$tablerows[$position] .= '<td class="linecoldescription">'.str_repeat($repeatChar, $TInfos['level']).$prod->getNomUrl(1).'</td>';
+						$tablerows[$position] .= '<td class="linecoldescription">'.str_repeat($repeatChar, (int) $TInfos['level']).$prod->getNomUrl(1).'</td>';
 						$tablerows[$position] .= '<td></td>';
 						$tablerows[$position] .= '<td class="linecolqty right">'.$TInfos['qty'].'</td>';
 						$tablerows[$position] .= '<td>';
