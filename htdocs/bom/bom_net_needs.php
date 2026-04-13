@@ -349,7 +349,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 				print '<td class="linecoldescription">'.$prod->getNomUrl(1).'</td>';
 				print '<td class="linecolqty right">'.$elem['qty'].'</td>';
 				print '<td>';
-				$useunit = (($prod->type == Product::TYPE_PRODUCT && getDolGlobalInt('PRODUCT_USE_UNITS')) || (($prod->type == Product::TYPE_SERVICE) && ($elem['fk_unit'])));
+				$useunit = ((($prod->type == Product::TYPE_PRODUCT && getDolGlobalInt('PRODUCT_USE_UNITS')) || $prod->type == Product::TYPE_SERVICE) && !empty($elem['fk_unit']));
 				if ($useunit) {
 					require_once DOL_DOCUMENT_ROOT.'/core/class/cunits.class.php';
 					$unit = new CUnits($db);
