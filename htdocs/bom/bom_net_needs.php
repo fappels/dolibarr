@@ -260,6 +260,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 	print '<tbody>';
 	$tablerows = array();
 	$position = '';
+	$positionArray = array();
 	$levelposition = '';
 	$lineposition = 0;
 	if (count($TChildBom) > 0) {
@@ -267,19 +268,17 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 			foreach ($TChildBom as $fk_bom => $TProduct) {
 				$repeatChar = '&emsp;';
 				if (!empty($TProduct['bom'])) {
-					// we make position string in format 'lineposition.bomlevel.childposition'
+					// we make position string in format 'lineposition.bomlevel*lineposition.childposition'
 					if (!empty($TProduct['position']) && $TProduct['parentid'] == $object->id) {
 						// define lineposition
 						$lineposition = $TProduct['position'];
+						$positionArray = array($lineposition);
+					} elseif ($TProduct['level'] > 0) {
+						$positionArray = array_merge(array($lineposition), array_fill(0, ($TProduct['level'] - 1), $lineposition), array($TProduct['position']));
 					}
-					// define lineposition.bomlevel
-					$position = sprintf('%d.%d', $lineposition, $TProduct['level']);
+					$position = implode('.', $positionArray);
 					// memorize level position for products in bom
 					$levelposition = $position;
-					if (!empty($TProduct['parentid']) && $TProduct['parentid'] != $object->id && empty($TProduct['product'])) {
-						// define lineposition.bomlevel.childposition
-						$position = sprintf('%s.%d', $position, $TProduct['position']);
-					}
 					$prod = new Product($db);
 					$prod->fetch($TProduct['bom']->fk_product);
 					if ($TProduct['parentid'] != $object->id) {
@@ -320,7 +319,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 						} else {
 							$tablerows[$position] = '<tr class="oddeven">';
 						}
-						$tablerows[$position] .= '<td class="linecoldescription">'.str_repeat($repeatChar, (int) $TInfos['level']).$prod->getNomUrl(1).'</td>';
+						$tablerows[$position] .= '<td class="linecoldescription">'.str_repeat($repeatChar, (int) $TInfos['level']).$prod->getNomUrl(1).' - '.$prod->label.'</td>';
 						$tablerows[$position] .= '<td></td>';
 						$tablerows[$position] .= '<td class="linecolqty right">'.$TInfos['qty'].'</td>';
 						$tablerows[$position] .= '<td>';
@@ -332,7 +331,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 				}
 			}
 			// Sort the rows numeric by position string
-			ksort($tablerows, SORT_NUMERIC);
+			uksort($tablerows, 'version_compare');
 			// Print the rows
 			foreach ($tablerows as $position => $row) {
 				print $row;
@@ -346,7 +345,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 					$prod->stock_reel = 0;
 				}
 				print '<tr class="oddeven">';
-				print '<td class="linecoldescription">'.$prod->getNomUrl(1).'</td>';
+				print '<td class="linecoldescription">'.$prod->getNomUrl(1).' - '.$prod->label.'</td>';
 				print '<td class="linecolqty right">'.$elem['qty'].'</td>';
 				print '<td>';
 				$useunit = ((($prod->type == Product::TYPE_PRODUCT && getDolGlobalInt('PRODUCT_USE_UNITS')) || $prod->type == Product::TYPE_SERVICE) && !empty($elem['fk_unit']));
@@ -354,7 +353,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 					require_once DOL_DOCUMENT_ROOT.'/core/class/cunits.class.php';
 					$unit = new CUnits($db);
 					$unit->fetch((int) $elem['fk_unit']);
-					print(isset($unit->label) ? "&nbsp;".$langs->trans(ucwords($unit->label))."&nbsp;" : '');
+					print(isset($unit->label) ? "&nbsp;".$unit->label."&nbsp;" : '');
 				}
 				print '</td>';
 				print '<td class="linecolstock right">'.price2num($prod->stock_reel, 'MS').'</td>';
